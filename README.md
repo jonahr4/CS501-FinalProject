@@ -1,14 +1,13 @@
 
-# MealPrep Pro 🍽️
+# MealPrep Pro
 **Smart Meal Planning & Nutrition Tracker**  
-_CS501 Fall 2025 — Mobile App Development_
 
-## 📱 App Concept
+## App Concept
 MealPrep Pro is a mobile app that helps users simplify weekly meal planning, log food intake, and track nutrition in one place. Users can discover recipes, scan food barcodes, plan their meals on a calendar, and auto-generate smart shopping lists.
 
 This project is built using Jetpack Compose and MVVM, with Room as our local database. It also uses onboard sensors like the camera (CameraX) and GPS (FusedLocationProviderClient).
 
-## 🎯 Target Users & Problem
+## Target Users & Problem
 Targeted at students and busy professionals who struggle with:
 - Repetitive meals and lack of recipe ideas
 - Forgetting ingredients while shopping
@@ -16,7 +15,7 @@ Targeted at students and busy professionals who struggle with:
 
 MealPrep Pro solves this by combining recipe browsing, food logging, meal planning, and store location tools.
 
-## ✨ Features
+## Features
 
 ### MVP
 - Barcode food scan (Nutritionix API)
@@ -30,13 +29,13 @@ MealPrep Pro solves this by combining recipe browsing, food logging, meal planni
 - Social recipe sharing
 - YouTube meal prep tutorials
 
-## 🌐 APIs & 📷 Sensors
+## APIs & Sensors
 - **APIs**: TheMealDB, Nutritionix/OpenFoodFacts, Google Places
 - **Sensors**: 
   - CameraX + ML Kit: barcode scanning, meal photos
   - GPS: nearby grocery alerts, store detection
 
-## 🗺️ Navigation Map
+## Navigation Map
 - Meal Plan Screen
 - Recipe Browser & Detail
 - Camera/Barcode Scan Screen
@@ -44,7 +43,7 @@ MealPrep Pro solves this by combining recipe browsing, food logging, meal planni
 - Shopping List
 - Responsive: bottom nav (phone), side nav/tablet support
 
-## 👥 Team & Roles
+## Team & Roles
 We are an Agile team of 2–3 developers.  
 - **UI/UX** — Jetpack Compose, Material 3, accessibility
 - **APIs & Sensors** — Retrofit, CameraX, GPS tools
@@ -52,7 +51,7 @@ We are an Agile team of 2–3 developers.
 
 We follow sprints with GitHub Issues + shared standups.
 
-## 🛠️ Tech Stack
+## Tech Stack
 - Kotlin + Jetpack Compose
 - MVVM architecture
 - Room (local database)
@@ -60,13 +59,7 @@ We follow sprints with GitHub Issues + shared standups.
 - CameraX, ML Kit, FusedLocationProviderClient
 - GitHub version control
 
-## ⚠️ Risks & Open Questions
+## Risks & Open Questions
 - Barcode coverage and fallback UX
 - Balancing calorie tracking with health-forward language
 - Stretch goals depend on time
-- Food photo recognition ML is optional (time-permitting)
-
----
-
-**Instructor**: Ron Czik  
-**Course**: CS501 - Mobile Application Development (Fall 2025)
