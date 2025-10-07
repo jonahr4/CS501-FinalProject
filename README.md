@@ -1,65 +1,66 @@
-
-# MealPrep Pro
+# MealMap
 **Smart Meal Planning & Nutrition Tracker**  
+_CS501 Final Project – Jonah Rothman & Abidul Islam_
 
 ## App Concept
-MealPrep Pro is a mobile app that helps users simplify weekly meal planning, log food intake, and track nutrition in one place. Users can discover recipes, scan food barcodes, plan their meals on a calendar, and auto-generate smart shopping lists.
+MealMap is a mobile app designed to simplify weekly meal planning, recipe discovery, and nutrition tracking. The goal is to help users eat healthier by making it easier to plan meals, discover new recipes, and track food intake. Key features include barcode scanning, meal photo logging, a drag-and-drop meal planning calendar, and auto-generated shopping lists.
 
-This project is built using Jetpack Compose and MVVM, with Room as our local database. It also uses onboard sensors like the camera (CameraX) and GPS (FusedLocationProviderClient).
+The app will be built natively for Android using Jetpack Compose, following an MVVM architecture. We will use a Room database for offline data storage, and integrate camera and GPS sensors for barcode scanning and store detection.
 
 ## Target Users & Problem
-Targeted at students and busy professionals who struggle with:
-- Repetitive meals and lack of recipe ideas
-- Forgetting ingredients while shopping
-- Inconsistent nutrition tracking
+MealMap is built for busy college students and young professionals who want to eat healthier but don’t have time to plan or shop properly. These users often fall into repetitive eating habits or rely on takeout due to the effort required to plan meals, find recipes, and build shopping lists.
 
-MealPrep Pro solves this by combining recipe browsing, food logging, meal planning, and store location tools.
+MealMap combines these tasks into a single streamlined experience. With built-in tracking and streak features, users can see their progress over time and stay motivated.
 
 ## Features
 
-### MVP
-- Barcode food scan (Nutritionix API)
-- Recipe discovery & saving (TheMealDB API)
-- Weekly meal planner + smart grocery list
-- Nutrition dashboard with daily macros
+### MVP (Minimum Viable Product)
+- **Barcode Food Logging**: Scan barcodes to fetch nutrition data (Nutritionix/OpenFoodFacts).
+- **Recipe Discovery**: Browse recipes from TheMealDB.
+- **Meal Planning**: Weekly calendar to assign meals.
+- **Shopping List**: Automatically built from weekly meal plan.
+- **Nutrition Tracking**: Track calories and macros over time.
 
 ### Stretch Goals
-- Ingredient substitutions and pantry checks
-- Receipt scanning for budgeting
-- Social recipe sharing
-- YouTube meal prep tutorials
+- Smart ingredient substitutions.
+- Receipt scanning for budget tracking.
+- Meal prep video tutorials (YouTube API).
+- Recipe sharing with friends.
 
 ## APIs & Sensors
-- **APIs**: TheMealDB, Nutritionix/OpenFoodFacts, Google Places
+- **APIs**: TheMealDB (recipes), Nutritionix or OpenFoodFacts (barcodes), Google Places (store search)
 - **Sensors**: 
-  - CameraX + ML Kit: barcode scanning, meal photos
-  - GPS: nearby grocery alerts, store detection
+  - **CameraX**: Barcode scanning and photo logging
+  - **GPS**: Find nearby grocery stores and show reminders
 
 ## Navigation Map
-- Meal Plan Screen
-- Recipe Browser & Detail
-- Camera/Barcode Scan Screen
-- Nutrition Dashboard
-- Shopping List
-- Responsive: bottom nav (phone), side nav/tablet support
+- **Meal Plan Screen**
+- **Recipe Browser & Detail View**
+- **Camera / Barcode Scanner Screen**
+- **Nutrition Dashboard**
+- **Shopping List**
+- Uses bottom nav bar (phone) and responsive layout (tablet)
+- Built with Scaffold + LazyColumn for composable layouts
 
 ## Team & Roles
-We are an Agile team of 2–3 developers.  
-- **UI/UX** — Jetpack Compose, Material 3, accessibility
-- **APIs & Sensors** — Retrofit, CameraX, GPS tools
-- **Persistence & Models** — Room DB, data schema, analytics
+We are a 2-person Agile team:
+- **Jonah Rothman** – API and sensor integration (CameraX, GPS), backend logic
+- **Abidul Islam** – UI/UX design, theming, layout using Jetpack Compose
+- **Both** – Shared responsibility for Room DB, data models, testing, and integration
 
-We follow sprints with GitHub Issues + shared standups.
+We’ll follow weekly sprints, commit to a shared GitHub repo, and collaborate on blockers.
 
 ## Tech Stack
 - Kotlin + Jetpack Compose
 - MVVM architecture
-- Room (local database)
-- Retrofit (API layer)
-- CameraX, ML Kit, FusedLocationProviderClient
-- GitHub version control
+- Room database (Android Jetpack)
+- Retrofit for API calls
+- CameraX + ML Kit for barcode/photo capture
+- GPS via FusedLocationProviderClient
+- GitHub for version control
 
 ## Risks & Open Questions
-- Barcode coverage and fallback UX
-- Balancing calorie tracking with health-forward language
-- Stretch goals depend on time
+- **Barcode Coverage**: Some food items may be missing; fallback to manual entry.
+- **Sensor Reliability**: GPS/geofencing can be inconsistent across devices.
+- **Nutrition Framing**: Language will be health-positive, not restrictive.
+- **Stretch Feature Time**: Time limits may affect extra features like receipt scanning or video integration.
