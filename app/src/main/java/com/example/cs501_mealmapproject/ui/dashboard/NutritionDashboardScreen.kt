@@ -11,22 +11,30 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
-
-private val sampleMetrics = listOf(
-    NutritionMetric(label = "Calories", value = "1,850 / 2,000", status = "92% of goal"),
-    NutritionMetric(label = "Protein", value = "110g / 125g", status = "+2 day streak"),
-    NutritionMetric(label = "Carbs", value = "210g / 230g", status = "on track"),
-    NutritionMetric(label = "Fats", value = "60g / 70g", status = "slightly low")
-)
 
 @Composable
 fun NutritionDashboardScreen(
     modifier: Modifier = Modifier,
-    metrics: List<NutritionMetric> = sampleMetrics
+    viewModel: NutritionDashboardViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    NutritionDashboardContent(
+        modifier = modifier,
+        metrics = uiState.metrics
+    )
+}
+
+@Composable
+private fun NutritionDashboardContent(
+    modifier: Modifier = Modifier,
+    metrics: List<NutritionMetric>
 ) {
     Column(
         modifier = modifier
@@ -102,16 +110,10 @@ fun NutritionDashboardScreen(
     }
 }
 
-data class NutritionMetric(
-    val label: String,
-    val value: String,
-    val status: String
-)
-
 @Preview(showBackground = true)
 @Composable
 private fun NutritionDashboardPreview() {
     CS501MealMapProjectTheme {
-        NutritionDashboardScreen()
+        NutritionDashboardContent(metrics = NutritionDashboardUiState().metrics)
     }
 }

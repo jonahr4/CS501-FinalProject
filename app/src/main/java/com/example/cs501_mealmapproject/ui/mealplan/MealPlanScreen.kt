@@ -14,34 +14,30 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
-
-private val sampleMealPlan = listOf(
-    DailyMealPlan(
-        day = "Monday",
-        meals = listOf(
-            MealSlot("Breakfast", "Greek yogurt parfait"),
-            MealSlot("Lunch", "Quinoa bowl with roasted veggies"),
-            MealSlot("Dinner", "Lemon herb salmon")
-        )
-    ),
-    DailyMealPlan(
-        day = "Tuesday",
-        meals = listOf(
-            MealSlot("Breakfast", "Overnight oats"),
-            MealSlot("Lunch", "Spicy chickpea wrap"),
-            MealSlot("Dinner", "Sheet-pan chicken fajitas")
-        )
-    )
-)
 
 @Composable
 fun MealPlanScreen(
     modifier: Modifier = Modifier,
-    plan: List<DailyMealPlan> = sampleMealPlan
+    mealPlanViewModel: MealPlanViewModel = viewModel()
+) {
+    val uiState by mealPlanViewModel.uiState.collectAsState()
+    MealPlanContent(
+        modifier = modifier,
+        plan = uiState.plan
+    )
+}
+
+@Composable
+private fun MealPlanContent(
+    modifier: Modifier = Modifier,
+    plan: List<DailyMealPlan>
 ) {
     Column(
         modifier = modifier
@@ -103,20 +99,10 @@ fun MealPlanScreen(
     }
 }
 
-data class DailyMealPlan(
-    val day: String,
-    val meals: List<MealSlot>
-)
-
-data class MealSlot(
-    val mealType: String,
-    val recipeName: String
-)
-
 @Preview(showBackground = true)
 @Composable
 private fun MealPlanScreenPreview() {
     CS501MealMapProjectTheme {
-        MealPlanScreen()
+        MealPlanContent(plan = MealPlanUiState().plan)
     }
 }
