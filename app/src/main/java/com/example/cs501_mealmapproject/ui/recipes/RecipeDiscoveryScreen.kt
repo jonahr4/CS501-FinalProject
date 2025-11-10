@@ -1,5 +1,7 @@
 package com.example.cs501_mealmapproject.ui.recipes
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -20,11 +22,17 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -32,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,16 +57,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.cs501_mealmapproject.ui.mealplan.DailyMealPlan
+import com.example.cs501_mealmapproject.ui.mealplan.MealPlanDayFormatter
+import com.example.cs501_mealmapproject.ui.mealplan.MealPlanViewModel
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
+import java.time.LocalDate
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeDiscoveryScreen(
+    mealPlanViewModel: MealPlanViewModel,
     modifier: Modifier = Modifier,
     viewModel: RecipeDiscoveryViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val planState by mealPlanViewModel.uiState.collectAsState()
     var selectedRecipe by remember { mutableStateOf<RecipeSummary?>(null) }
+    var plannerTarget by remember { mutableStateOf<RecipeSummary?>(null) }
+    var showPlannerSuccess by remember { mutableStateOf(false) }
 
     when {
         uiState.isLoading -> {
@@ -104,7 +122,36 @@ fun RecipeDiscoveryScreen(
     selectedRecipe?.let { recipe ->
         RecipeDetailDialog(
             recipe = recipe,
+            onAddToPlanner = { plannerTarget = recipe },
             onDismiss = { selectedRecipe = null }
+        )
+    }
+
+    plannerTarget?.let { recipe ->
+        PlannerSelectionDialog(
+            recipe = recipe,
+            plan = planState.plan,
+            onConfirm = { selections ->
+                selections.forEach { (day, mealType) ->
+                    mealPlanViewModel.assignMeal(day.date, mealType, recipe.title)
+                }
+                plannerTarget = null
+                selectedRecipe = null
+                showPlannerSuccess = true
+            },
+            onDismiss = { plannerTarget = null }
+        )
+    }
+
+    if (showPlannerSuccess) {
+        AlertDialog(
+            onDismissRequest = { showPlannerSuccess = false },
+            text = { Text("Recipe added to planner") },
+            confirmButton = {
+                TextButton(onClick = { showPlannerSuccess = false }) {
+                    Text("OK")
+                }
+            }
         )
     }
 }
@@ -247,6 +294,7 @@ private fun RecipeThumbnail(
 @Composable
 private fun RecipeDetailDialog(
     recipe: RecipeSummary,
+    onAddToPlanner: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -314,8 +362,139 @@ private fun RecipeDetailDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = onAddToPlanner) {
+                Text("Add to planner")
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Close")
+            }
+        }
+    )
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+private fun PlannerSelectionDialog(
+    recipe: RecipeSummary,
+    plan: List<DailyMealPlan>,
+    onConfirm: (List<Pair<DailyMealPlan, String>>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val expandedDays = remember(plan) {
+        mutableStateMapOf<LocalDate, Boolean>().apply {
+            plan.forEach { put(it.date, false) }
+        }
+    }
+    val selections = remember(plan) {
+        mutableStateMapOf<Pair<LocalDate, String>, Boolean>().apply {
+            plan.forEach { day ->
+                day.meals.forEach { meal ->
+                    put(day.date to meal.mealType, false)
+                }
+            }
+        }
+    }
+    var showValidationError by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Add ${recipe.title} to planner") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                plan.forEach { day ->
+                    val expanded = expandedDays[day.date] ?: false
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = day.date.format(MealPlanDayFormatter),
+                                    style = MaterialTheme.typography.titleSmall
+                                )
+                                IconButton(onClick = { expandedDays[day.date] = !expanded }) {
+                                    Icon(
+                                        imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                        contentDescription = if (expanded) "Collapse" else "Expand"
+                                    )
+                                }
+                            }
+                            if (expanded) {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    day.meals.forEach { meal ->
+                                        val key = day.date to meal.mealType
+                                        val checked = selections[key] ?: false
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Checkbox(
+                                                checked = checked,
+                                                onCheckedChange = { selections[key] = it }
+                                            )
+                                            Column {
+                                                Text(meal.mealType, style = MaterialTheme.typography.bodyLarge)
+                                                Text(
+                                                    text = meal.recipeName,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (showValidationError) {
+                    Text(
+                        text = "Select at least one meal slot",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val selectedSlots = selections
+                    .filterValues { it }
+                    .mapNotNull { (key, _) ->
+                        val (date, mealType) = key
+                        val day = plan.firstOrNull { it.date == date } ?: return@mapNotNull null
+                        day to mealType
+                    }
+                if (selectedSlots.isEmpty()) {
+                    showValidationError = true
+                } else {
+                    onConfirm(selectedSlots)
+                    showValidationError = false
+                }
+            }) {
+                Text("Done")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
     )

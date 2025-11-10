@@ -31,9 +31,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.cs501_mealmapproject.ui.auth.SignInScreen
+import com.example.cs501_mealmapproject.ui.mealplan.MealPlanViewModel
 import com.example.cs501_mealmapproject.ui.model.AppUser
 import com.example.cs501_mealmapproject.ui.navigation.MealMapDestination
 import com.example.cs501_mealmapproject.ui.navigation.MealMapNavHost
@@ -83,6 +85,7 @@ fun MealMapApp() {
             val destinations = MealMapDestination.primaryDestinations
             val currentRoute = backStackEntry?.destination?.route
             val activeDestination = destinations.firstOrNull { it.route == currentRoute }
+            val mealPlanViewModel: MealPlanViewModel = viewModel()
 
             Scaffold(
                 topBar = {
@@ -143,6 +146,7 @@ fun MealMapApp() {
             ) { innerPadding ->
                 MealMapNavHost(
                     navController = navController,
+                    mealPlanViewModel = mealPlanViewModel,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
