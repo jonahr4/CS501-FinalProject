@@ -1,18 +1,39 @@
 package com.example.cs501_mealmapproject.ui.mealplan
 
 import androidx.lifecycle.ViewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class MealPlanViewModel : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MealPlanUiState())
+    private val _uiState = MutableStateFlow(MealPlanUiState(plan = generateWeekPlan()))
     val uiState: StateFlow<MealPlanUiState> = _uiState.asStateFlow()
+
+    private fun generateWeekPlan(startDate: LocalDate = LocalDate.now()): List<DailyMealPlan> {
+        val formatter = DateTimeFormatter.ofPattern("EEEE MMM d")
+        return (0 until 7).map { offset ->
+            val date = startDate.plusDays(offset.toLong())
+            DailyMealPlan(
+                day = date.format(formatter),
+                meals = defaultMeals.map { it.copy() }
+            )
+        }
+    }
+
+    companion object {
+        private val defaultMeals = listOf(
+            MealSlot("Breakfast", "Tap to add a recipe"),
+            MealSlot("Lunch", "Tap to add a recipe"),
+            MealSlot("Dinner", "Tap to add a recipe")
+        )
+    }
 }
 
 data class MealPlanUiState(
-    val plan: List<DailyMealPlan> = demoMealPlan
+    val plan: List<DailyMealPlan> = emptyList()
 )
 
 data class DailyMealPlan(
@@ -23,23 +44,4 @@ data class DailyMealPlan(
 data class MealSlot(
     val mealType: String,
     val recipeName: String
-)
-
-private val demoMealPlan = listOf(
-    DailyMealPlan(
-        day = "Monday",
-        meals = listOf(
-            MealSlot("Breakfast", "Greek yogurt parfait"),
-            MealSlot("Lunch", "Quinoa bowl with roasted veggies"),
-            MealSlot("Dinner", "Lemon herb salmon")
-        )
-    ),
-    DailyMealPlan(
-        day = "Tuesday",
-        meals = listOf(
-            MealSlot("Breakfast", "Overnight oats"),
-            MealSlot("Lunch", "Spicy chickpea wrap"),
-            MealSlot("Dinner", "Sheet-pan chicken fajitas")
-        )
-    )
 )
