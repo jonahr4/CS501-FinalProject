@@ -16,17 +16,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
-private val sampleMetrics = listOf(
-    NutritionMetric(label = "Calories", value = "1,850 / 2,000", status = "92% of goal"),
-    NutritionMetric(label = "Protein", value = "110g / 125g", status = "+2 day streak"),
-    NutritionMetric(label = "Carbs", value = "210g / 230g", status = "on track"),
-    NutritionMetric(label = "Fats", value = "60g / 70g", status = "slightly low")
-)
-
 @Composable
 fun NutritionDashboardScreen(
     modifier: Modifier = Modifier,
-    metrics: List<NutritionMetric> = sampleMetrics
+    metrics: List<NutritionMetric> // The screen now requires a list of metrics to be passed in.
 ) {
     Column(
         modifier = modifier
@@ -111,7 +104,14 @@ data class NutritionMetric(
 @Preview(showBackground = true)
 @Composable
 private fun NutritionDashboardPreview() {
+    // The preview now defines its own sample data to pass to the stateless screen.
+    val previewMetrics = listOf(
+        NutritionMetric(label = "Calories", value = "1,850 / 2,000", status = "92% of goal"),
+        NutritionMetric(label = "Protein", value = "110g / 125g", status = "+2 day streak"),
+        NutritionMetric(label = "Carbs", value = "210g / 230g", status = "on track"),
+        NutritionMetric(label = "Fats", value = "60g / 70g", status = "slightly low")
+    )
     CS501MealMapProjectTheme {
-        NutritionDashboardScreen()
+        NutritionDashboardScreen(metrics = previewMetrics)
     }
 }
