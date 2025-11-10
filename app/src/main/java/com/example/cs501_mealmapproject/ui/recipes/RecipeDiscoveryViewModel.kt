@@ -69,5 +69,7 @@ data class RecipeSummary(
     val description: String,
     val tags: List<String>,
     val imageUrl: String?,
-    val instructions: String
+    val instructions: String,
+    val ingredients: List<String>,
+    val sourceUrl: String?
 )

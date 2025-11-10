@@ -20,10 +20,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,48 +31,40 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.cs501_mealmapproject.ui.auth.SignInScreen
+import com.example.cs501_mealmapproject.ui.mealplan.MealPlanViewModel
 import com.example.cs501_mealmapproject.ui.model.AppUser
 import com.example.cs501_mealmapproject.ui.navigation.MealMapDestination
 import com.example.cs501_mealmapproject.ui.navigation.MealMapNavHost
-import com.example.cs501_mealmapproject.ui.onboarding.OnboardingProfile
 import com.example.cs501_mealmapproject.ui.onboarding.OnboardingScreen
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MealMapApp() {
-    var user by remember { mutableStateOf<AppUser?>(null) }
-    var onboardingProfile by remember { mutableStateOf<OnboardingProfile?>(null) }
-    var onboardingComplete by rememberSaveable { mutableStateOf(false) }
+    val sessionViewModel: SessionViewModel = viewModel()
+    val sessionState by sessionViewModel.uiState.collectAsState()
     var showProfileMenu by remember { mutableStateOf(false) }
 
     when {
-        user == null -> {
+        sessionState.user == null -> {
             SignInScreen(
                 modifier = Modifier.fillMaxSize(),
                 onSignInClick = {
-                    // TODO: Replace stub with Google OAuth sign-in result.
-                    user = AppUser(
-                        id = "demo-user",
-                        displayName = "Demo Student",
-                        email = "demo@student.edu"
-                    )
-                    onboardingComplete = onboardingProfile != null
+                    sessionViewModel.signInDemoUser()
                 }
             )
         }
 
-        !onboardingComplete -> {
+        !sessionState.onboardingComplete -> {
             OnboardingScreen(
                 modifier = Modifier.fillMaxSize(),
-                initialProfile = onboardingProfile,
+                initialProfile = sessionState.onboardingProfile,
                 onSubmit = { profile ->
-                    onboardingProfile = profile
-                    onboardingComplete = true
-                    // TODO: Persist onboardingProfile to repository scoped by user.id
+                    sessionViewModel.completeOnboarding(profile)
                 }
             )
         }
@@ -83,6 +75,7 @@ fun MealMapApp() {
             val destinations = MealMapDestination.primaryDestinations
             val currentRoute = backStackEntry?.destination?.route
             val activeDestination = destinations.firstOrNull { it.route == currentRoute }
+            val mealPlanViewModel: MealPlanViewModel = viewModel()
 
             Scaffold(
                 topBar = {
@@ -91,21 +84,18 @@ fun MealMapApp() {
                             Text(text = activeDestination?.label ?: "MealMap")
                         },
                         actions = {
-                            user?.let { currentUser ->
+                            sessionState.user?.let { currentUser ->
                                 ProfileMenuAction(
                                     user = currentUser,
                                     expanded = showProfileMenu,
                                     onExpandedChange = { showProfileMenu = it },
                                     onResetGoals = {
-                                        onboardingComplete = false
+                                        sessionViewModel.resetOnboarding()
                                         showProfileMenu = false
                                     },
                                     onSignOut = {
-                                        onboardingProfile = null
-                                        onboardingComplete = false
-                                        user = null
+                                        sessionViewModel.signOut()
                                         showProfileMenu = false
-                                        // TODO: Sign out from FirebaseAuth/Google when hooked up.
                                     }
                                 )
                             }
@@ -143,6 +133,7 @@ fun MealMapApp() {
             ) { innerPadding ->
                 MealMapNavHost(
                     navController = navController,
+                    mealPlanViewModel = mealPlanViewModel,
                     modifier = Modifier.padding(innerPadding)
                 )
             }

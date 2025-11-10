@@ -61,6 +61,10 @@ class RecipeDiscoveryRepository(
         val shortDescription = instructions.lineSequence().firstOrNull()?.take(140)
             ?: "Tap to view recipe details"
         val imageUrl = optString("strMealThumb").takeIf { it.isNotBlank() && it != "null" }
+        val sourceUrl = optString("strSource").takeIf { it.isNotBlank() && it != "null" }
+            ?: optString("idMeal").takeIf { it.isNotBlank() && it != "null" }?.let { id ->
+                "https://www.themealdb.com/meal/$id"
+            }
 
         return RecipeSummary(
             title = optString("strMeal"),
@@ -68,7 +72,25 @@ class RecipeDiscoveryRepository(
             description = shortDescription,
             tags = if (tags.isNotEmpty()) tags else listOf("Source: TheMealDB"),
             imageUrl = imageUrl,
-            instructions = instructions.ifBlank { "Detailed instructions coming soon." }
+            instructions = instructions.ifBlank { "Detailed instructions coming soon." },
+            ingredients = buildIngredientList(),
+            sourceUrl = sourceUrl
         )
+    }
+
+    private fun JSONObject.buildIngredientList(): List<String> {
+        val items = mutableListOf<String>()
+        for (index in 1..20) {
+            val ingredient = optString("strIngredient$index").orEmpty().trim()
+            if (ingredient.isEmpty() || ingredient.equals("null", ignoreCase = true)) continue
+            val measure = optString("strMeasure$index").orEmpty().trim()
+            val entry = if (measure.isNotEmpty() && !measure.equals("null", ignoreCase = true)) {
+                "$measure $ingredient".trim()
+            } else {
+                ingredient
+            }
+            items += entry
+        }
+        return items
     }
 }

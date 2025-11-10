@@ -19,13 +19,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
+import java.time.LocalDate
 
 @Composable
 fun MealPlanScreen(
-    modifier: Modifier = Modifier,
-    mealPlanViewModel: MealPlanViewModel = viewModel()
+    mealPlanViewModel: MealPlanViewModel,
+    modifier: Modifier = Modifier
 ) {
     val uiState by mealPlanViewModel.uiState.collectAsState()
     MealPlanContent(
@@ -52,7 +52,7 @@ private fun MealPlanContent(
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "PLACEHOLDER days where you will plan with recipes ",
+            text = "Assign meals to each day to keep groceries and nutrition aligned.",
             style = MaterialTheme.typography.bodyMedium
         )
         LazyColumn(
@@ -71,7 +71,7 @@ private fun MealPlanContent(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = dailyPlan.day,
+                            text = dailyPlan.date.format(MealPlanDayFormatter),
                             style = MaterialTheme.typography.titleMedium
                         )
                         dailyPlan.meals.forEach { mealSlot ->
@@ -91,7 +91,7 @@ private fun MealPlanContent(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "For each meal, you can select recipe to plan",
+                            text = "Tap a recipe to add it here from the Recipes tab",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -105,6 +105,21 @@ private fun MealPlanContent(
 @Composable
 private fun MealPlanScreenPreview() {
     CS501MealMapProjectTheme {
-        MealPlanContent(plan = MealPlanUiState().plan)
+        MealPlanContent(plan = previewWeekPlan())
+    }
+}
+
+private fun previewWeekPlan(): List<DailyMealPlan> {
+    val today = LocalDate.now()
+    return (0 until 7).map { offset ->
+        val date = today.plusDays(offset.toLong())
+        DailyMealPlan(
+            date = date,
+            meals = listOf(
+                MealSlot("Breakfast", "Greek yogurt parfait"),
+                MealSlot("Lunch", "Quinoa bowl"),
+                MealSlot("Dinner", "Oven roasted salmon")
+            )
+        )
     }
 }
