@@ -23,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,9 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -123,7 +126,7 @@ private fun RecipeDiscoveryContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Discover recipes without the scroll fatigue",
+            text = "Discover recipes",
             style = MaterialTheme.typography.titleLarge
         )
         Text(
@@ -171,51 +174,37 @@ private fun RecipeCard(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+            RecipeThumbnail(
+                imageUrl = recipe.imageUrl,
+                contentDescription = recipe.title,
+                sizeDp = 72.dp
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                RecipeThumbnail(imageUrl = recipe.imageUrl, contentDescription = recipe.title)
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = recipe.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = recipe.subtitle,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                Text(
+                    text = recipe.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = recipe.subtitle,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "Tap to open details, add to planner, or export ingredients to the shopping list.",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
-            Text(
-                text = recipe.description,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            if (recipe.tags.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    recipe.tags.forEach { tag ->
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(tag) },
-                            colors = AssistChipDefaults.assistChipColors()
-                        )
-                    }
-                }
-            }
-            Text(
-                text = "Tap to open details, add to planner, or export ingredients to the shopping list.",
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }
@@ -223,10 +212,11 @@ private fun RecipeCard(
 @Composable
 private fun RecipeThumbnail(
     imageUrl: String?,
-    contentDescription: String
+    contentDescription: String,
+    sizeDp: Dp = 48.dp
 ) {
     val modifier = Modifier
-        .size(48.dp)
+        .size(sizeDp)
         .clip(CircleShape)
 
     if (imageUrl.isNullOrBlank()) {
@@ -259,6 +249,7 @@ private fun RecipeDetailDialog(
     recipe: RecipeSummary,
     onDismiss: () -> Unit
 ) {
+    val uriHandler = LocalUriHandler.current
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = recipe.title) },
@@ -284,20 +275,42 @@ private fun RecipeDetailDialog(
                     )
                 }
                 Text(text = recipe.subtitle, style = MaterialTheme.typography.bodySmall)
-                if (recipe.tags.isNotEmpty()) {
+                if (recipe.tags.any { it != "Source: TheMealDB" }) {
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        recipe.tags.forEach { tag ->
+                        recipe.tags.filter { it != "Source: TheMealDB" }.forEach { tag ->
                             AssistChip(onClick = {}, label = { Text(tag) })
                         }
                     }
                 }
+                if (recipe.ingredients.isNotEmpty()) {
+                    Text(
+                        text = "Ingredients",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    recipe.ingredients.forEach { ingredient ->
+                        Text(
+                            text = "• $ingredient",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                Divider()
+                Text(
+                    text = "Recipe",
+                    style = MaterialTheme.typography.titleMedium
+                )
                 Text(
                     text = recipe.instructions,
                     style = MaterialTheme.typography.bodyMedium
                 )
+                recipe.sourceUrl?.let { url ->
+                    TextButton(onClick = { uriHandler.openUri(url) }) {
+                        Text("Click here to view on TheMealDB")
+                    }
+                }
             }
         },
         confirmButton = {
@@ -308,3 +321,39 @@ private fun RecipeDetailDialog(
     )
 }
 
+@Preview(showBackground = true)
+@Composable
+private fun RecipeDiscoveryScreenPreview() {
+    CS501MealMapProjectTheme {
+        RecipeDiscoveryContent(
+            recipes = previewRecipes,
+            query = "salmon",
+            onQueryChange = {},
+            onSearch = {},
+            onRecipeClick = {}
+        )
+    }
+}
+
+private val previewRecipes = listOf(
+    RecipeSummary(
+        title = "Mediterranean Chickpea Salad",
+        subtitle = "Mediterranean • Vegetarian",
+        description = "Chickpeas, cucumber, and herbs tossed in lemon dressing.",
+        tags = listOf("High protein", "Budget"),
+        imageUrl = "https://www.themealdb.com/images/media/meals/llcbn01574260722.jpg",
+        instructions = "Mix everything and serve chilled.",
+        ingredients = listOf("1 cup Chickpeas", "1 tbsp Olive Oil"),
+        sourceUrl = "https://www.themealdb.com/meal/12345"
+    ),
+    RecipeSummary(
+        title = "Sheet-Pan Teriyaki Salmon",
+        subtitle = "Japanese • Seafood",
+        description = "Sweet and savory glaze baked with seasonal veggies.",
+        tags = listOf("Omega-3", "Meal Prep"),
+        imageUrl = "https://www.themealdb.com/images/media/meals/xyz.jpg",
+        instructions = "Bake salmon with sauce and veggies.",
+        ingredients = listOf("2 Salmon Fillets", "1/4 cup Teriyaki Sauce"),
+        sourceUrl = "https://www.themealdb.com/meal/67890"
+    )
+)
