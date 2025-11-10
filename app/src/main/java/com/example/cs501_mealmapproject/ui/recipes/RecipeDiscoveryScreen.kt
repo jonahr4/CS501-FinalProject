@@ -308,35 +308,3 @@ private fun RecipeDetailDialog(
     )
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun RecipeDiscoveryScreenPreview() {
-    CS501MealMapProjectTheme {
-        RecipeDiscoveryContent(
-            recipes = previewRecipes,
-            query = "salmon",
-            onQueryChange = {},
-            onSearch = {},
-            onRecipeClick = {}
-        )
-    }
-}
-
-private val previewRecipes = listOf(
-    RecipeSummary(
-        title = "Mediterranean Chickpea Salad",
-        subtitle = "Mediterranean • Vegetarian",
-        description = "Chickpeas, cucumber, and herbs tossed in lemon dressing.",
-        tags = listOf("High protein", "Budget"),
-        imageUrl = "https://www.themealdb.com/images/media/meals/llcbn01574260722.jpg",
-        instructions = "Mix everything and serve chilled."
-    ),
-    RecipeSummary(
-        title = "Sheet-Pan Teriyaki Salmon",
-        subtitle = "Japanese • Seafood",
-        description = "Sweet and savory glaze baked with seasonal veggies.",
-        tags = listOf("Omega-3", "Meal Prep"),
-        imageUrl = "https://www.themealdb.com/images/media/meals/xyz.jpg",
-        instructions = "Bake salmon with sauce and veggies."
-    )
-)

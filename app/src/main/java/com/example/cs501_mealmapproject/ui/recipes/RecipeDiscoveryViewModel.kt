@@ -31,6 +31,7 @@ class RecipeDiscoveryViewModel(
         fetchRecipes(sanitizedQuery)
     }
 
+    // Searches for recipes using API
     private fun fetchRecipes(query: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null, query = query) }

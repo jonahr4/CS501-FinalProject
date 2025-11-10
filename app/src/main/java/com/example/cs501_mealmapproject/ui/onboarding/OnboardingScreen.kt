@@ -26,6 +26,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
+// This function is composable for oboarding
+// TODO: Implement onboarding so Values inputted get saved to user
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OnboardingScreen(
@@ -60,6 +62,10 @@ fun OnboardingScreen(
         Text(
             text = "Welcome to MealMap",
             style = MaterialTheme.typography.headlineMedium
+        )
+        Text(
+            text = "This is currently a placeholer for the onboarding screen",
+            style = MaterialTheme.typography.bodyMedium
         )
         Text(
             text = "Personalize your plan to generate smarter recommendations and accurate nutrition targets.",

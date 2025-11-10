@@ -34,6 +34,8 @@ fun MealPlanScreen(
     )
 }
 
+// Composable function for Plan Screen. Currently using placeholder info
+// TODO: Implement Planning functionality
 @Composable
 private fun MealPlanContent(
     modifier: Modifier = Modifier,
@@ -46,11 +48,11 @@ private fun MealPlanContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Plan your week at a glance",
+            text = "Plan your week",
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Drag and drop recipes from discovery or log your own meals to keep the calendar aligned with your goals.",
+            text = "PLACEHOLDER days where you will plan with recipes ",
             style = MaterialTheme.typography.bodyMedium
         )
         LazyColumn(
@@ -89,7 +91,7 @@ private fun MealPlanContent(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Add grocery items to auto-build the shopping list",
+                            text = "For each meal, you can select recipe to plan",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

@@ -34,6 +34,8 @@ fun FoodLogScreen(
     )
 }
 
+// Composable function for foodLogging. Currently using placeholder info
+// TODO: Implement Food Logging Functionality
 @Composable
 private fun FoodLogContent(
     modifier: Modifier = Modifier,
@@ -46,11 +48,11 @@ private fun FoodLogContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Log meals in seconds",
+            text = "Log meals",
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Use the barcode scanner for packaged items or capture a meal photo for quick tagging and nutrition lookup.",
+            text = "Use the barcode scanner to autofill or log food manually.",
             style = MaterialTheme.typography.bodyMedium
         )
         Card(
@@ -74,10 +76,6 @@ private fun FoodLogContent(
                 OutlinedButton(onClick = { }) {
                     Text("Log manually")
                 }
-                Text(
-                    text = "If barcode data is missing, MealMap falls back to a guided manual entry with recent items pre-filled.",
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
         }
         Card(
@@ -92,7 +90,7 @@ private fun FoodLogContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Recent logs",
+                    text = "Recent logs PLACEHOLDER",
                     style = MaterialTheme.typography.titleMedium
                 )
                 recentLogs.forEach { entry ->
@@ -107,11 +105,6 @@ private fun FoodLogContent(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Tap an entry to edit servings or add notes for streak tracking.",
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
         }
     }

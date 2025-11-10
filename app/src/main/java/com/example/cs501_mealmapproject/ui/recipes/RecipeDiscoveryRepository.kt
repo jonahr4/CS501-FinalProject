@@ -11,6 +11,7 @@ import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
+//Implementation of using themealDB API
 class RecipeDiscoveryRepository(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {

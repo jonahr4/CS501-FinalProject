@@ -31,6 +31,8 @@ fun NutritionDashboardScreen(
     )
 }
 
+// Composable function for dashboard. Currently using placeholder info
+// TODO: Implement Dashboard with real data.
 @Composable
 private fun NutritionDashboardContent(
     modifier: Modifier = Modifier,
@@ -43,12 +45,12 @@ private fun NutritionDashboardContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Track progress without the spreadsheets",
+            text = "Progress Tracking",
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Daily streaks, macro breakdowns, and GPS-powered grocery nudges surface right when you need them.",
-            style = MaterialTheme.typography.bodyMedium
+            text = "TODO: Implement Dashboard",
+            style = MaterialTheme.typography.titleMedium
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -94,7 +96,7 @@ private fun NutritionDashboardContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Engagement highlights",
+                    text = "Engagement highlights PLACEHOLDER",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(

@@ -35,6 +35,8 @@ fun ShoppingListScreen(
     )
 }
 
+// Composable function for Shopping List Screen. Currently using placeholder info
+// TODO: Implement Shopping functionality
 @Composable
 private fun ShoppingListContent(
     modifier: Modifier = Modifier,
@@ -51,7 +53,11 @@ private fun ShoppingListContent(
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Lists sync with the meal planner and stay available offline using Room.",
+            text = "Track what you have shopped for ",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            text = "Lists sync with the meal planner",
             style = MaterialTheme.typography.bodyMedium
         )
         LazyColumn(

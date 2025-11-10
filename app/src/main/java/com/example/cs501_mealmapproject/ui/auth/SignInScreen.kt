@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
+// This class has function for SignInScreen which is part of the Onboarding process, which promts users to sign in
 @Composable
 fun SignInScreen(
     modifier: Modifier = Modifier,
@@ -39,9 +40,10 @@ fun SignInScreen(
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
-                text = "Use your Google account to sync meal plans, nutrition streaks, and shopping lists across devices.",
+                text = "Use your Google account with Firebase to sync meal plans and save data.",
                 style = MaterialTheme.typography.bodyMedium
             )
+            // TODO: Add Google sign in button implemntation with Firebase
             Spacer(modifier = Modifier.height(12.dp))
             Button(
                 onClick = onSignInClick,
@@ -54,11 +56,6 @@ fun SignInScreen(
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("Continue with Google")
             }
-            Text(
-                text = "We never post on your behalf. You can sign out anytime from your profile menu.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
         }
     }
 }
