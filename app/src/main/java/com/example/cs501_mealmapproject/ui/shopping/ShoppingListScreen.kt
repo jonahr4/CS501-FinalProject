@@ -13,34 +13,32 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
-
-private val sampleSections = listOf(
-    ShoppingSection(
-        title = "Produce",
-        items = listOf(
-            ShoppingItem("Spinach", true),
-            ShoppingItem("Cherry tomatoes", false)
-        )
-    ),
-    ShoppingSection(
-        title = "Pantry",
-        items = listOf(
-            ShoppingItem("Whole grain wraps", false),
-            ShoppingItem("Chickpeas", true)
-        )
-    )
-)
 
 @Composable
 fun ShoppingListScreen(
     modifier: Modifier = Modifier,
-    sections: List<ShoppingSection> = sampleSections
+    viewModel: ShoppingListViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    ShoppingListContent(
+        modifier = modifier,
+        sections = uiState.sections
+    )
+}
+
+@Composable
+private fun ShoppingListContent(
+    modifier: Modifier = Modifier,
+    sections: List<ShoppingSection>
 ) {
     Column(
         modifier = modifier
@@ -102,20 +100,10 @@ fun ShoppingListScreen(
     }
 }
 
-data class ShoppingSection(
-    val title: String,
-    val items: List<ShoppingItem>
-)
-
-data class ShoppingItem(
-    val name: String,
-    val checked: Boolean
-)
-
 @Preview(showBackground = true)
 @Composable
 private fun ShoppingListScreenPreview() {
     CS501MealMapProjectTheme {
-        ShoppingListScreen()
+        ShoppingListContent(sections = ShoppingListUiState().sections)
     }
 }

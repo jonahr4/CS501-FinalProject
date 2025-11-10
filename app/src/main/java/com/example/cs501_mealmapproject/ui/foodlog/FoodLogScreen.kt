@@ -14,14 +14,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
 @Composable
 fun FoodLogScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    foodLogViewModel: FoodLogViewModel = viewModel()
+) {
+    val uiState by foodLogViewModel.uiState.collectAsState()
+    FoodLogContent(
+        modifier = modifier,
+        recentLogs = uiState.recentLogs
+    )
+}
+
+@Composable
+private fun FoodLogContent(
+    modifier: Modifier = Modifier,
+    recentLogs: List<FoodLogEntry>
 ) {
     Column(
         modifier = modifier
@@ -79,17 +95,14 @@ fun FoodLogScreen(
                     text = "Recent logs",
                     style = MaterialTheme.typography.titleMedium
                 )
-                listOf(
-                    "Breakfast • Greek yogurt parfait" to "Logged via barcode",
-                    "Lunch • Chickpea wrap" to "Manual entry with substitutions"
-                ).forEach { (meal, source) ->
+                recentLogs.forEach { entry ->
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = meal,
+                            text = entry.meal,
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = source,
+                            text = entry.source,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -108,6 +121,6 @@ fun FoodLogScreen(
 @Composable
 private fun FoodLogScreenPreview() {
     CS501MealMapProjectTheme {
-        FoodLogScreen()
+        FoodLogContent(recentLogs = FoodLogUiState().recentLogs)
     }
 }
