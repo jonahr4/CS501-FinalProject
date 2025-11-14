@@ -2,6 +2,47 @@
 **Smart Meal Planning & Nutrition Tracker**  
 _CS501 Final Project – Jonah Rothman & Abidul Islam_
 
+---
+
+### Update – 11/11
+
+#### Current Feature Summary
+
+| Feature | Status | Notes                                                                   |
+|----------|---------|-------------------------------------------------------------------------|
+| **Recipe Discovery** | ✅ Implemented | Integrated with TheMealDB API. Users can browse and view recipe details. |
+| **Meal Planning Calendar** | ✅ Implemented | Weekly meal planner with  persistent storage.                           |
+| **Barcode Food Logging** | ⏳ In Progress | CameraX + ML Kit integration researched and next to implement.          |
+| **Shopping List Generation** | ⏳ In Progress | Auto-generated from weekly meal plan. Need backend logic. |
+| **Nutrition Tracking Dashboard** | ⏳ In Progress | Basic calorie/macro tracking implemented.               |
+| **Smart Ingredient Substitution** | 🕓 Pending | Planned feature to recommend alternatives.                              |
+| **Receipt Scanning / Budget Tracking** | 🕓 Pending | Requires OCR integration; descoped for MVP.                             |
+| **Recipe Sharing** | 🕓 Pending | To be implemented post-MVP as a social feature.                         |
+
+
+#### Build & Run Instructions
+
+To build and run **MealMap** locally:
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/jonahr4/CS501-FinalProject.git
+   cd CS501-FinalProject
+2. **Open in Android Studio**
+* Launch Android Studio
+* Select File → Open… and choose the cloned project folder.
+
+3. **Sync Gradle**
+* Android Studio will automatically prompt to sync.
+* If not, click “Sync Project with Gradle Files” in the toolbar.
+
+4. **Run the App**
+* Connect the Android Studio emulator. 
+* Click Run  in Android Studio.
+
+The app should build successfully and launch into the onboarding screen.
+
+---
 ## App Concept
 MealMap is a mobile app designed to simplify weekly meal planning, recipe discovery, and nutrition tracking. The goal is to help users eat healthier by making it easier to plan meals, discover new recipes, and track food intake. Key features include barcode scanning, meal photo logging, a drag-and-drop meal planning calendar, and auto-generated shopping lists.
 

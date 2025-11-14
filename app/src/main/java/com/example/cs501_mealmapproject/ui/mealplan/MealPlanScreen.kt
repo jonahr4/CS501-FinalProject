@@ -14,34 +14,32 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
-
-private val sampleMealPlan = listOf(
-    DailyMealPlan(
-        day = "Monday",
-        meals = listOf(
-            MealSlot("Breakfast", "Greek yogurt parfait"),
-            MealSlot("Lunch", "Quinoa bowl with roasted veggies"),
-            MealSlot("Dinner", "Lemon herb salmon")
-        )
-    ),
-    DailyMealPlan(
-        day = "Tuesday",
-        meals = listOf(
-            MealSlot("Breakfast", "Overnight oats"),
-            MealSlot("Lunch", "Spicy chickpea wrap"),
-            MealSlot("Dinner", "Sheet-pan chicken fajitas")
-        )
-    )
-)
+import java.time.LocalDate
 
 @Composable
 fun MealPlanScreen(
+    mealPlanViewModel: MealPlanViewModel,
+    modifier: Modifier = Modifier
+) {
+    val uiState by mealPlanViewModel.uiState.collectAsState()
+    MealPlanContent(
+        modifier = modifier,
+        plan = uiState.plan
+    )
+}
+
+// Composable function for Plan Screen. Currently using placeholder info
+// TODO: Implement Planning functionality
+@Composable
+private fun MealPlanContent(
     modifier: Modifier = Modifier,
-    plan: List<DailyMealPlan> = sampleMealPlan
+    plan: List<DailyMealPlan>
 ) {
     Column(
         modifier = modifier
@@ -50,11 +48,11 @@ fun MealPlanScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Plan your week at a glance",
+            text = "Plan your week",
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Drag and drop recipes from discovery or log your own meals to keep the calendar aligned with your goals.",
+            text = "Assign meals to each day to keep groceries and nutrition aligned.",
             style = MaterialTheme.typography.bodyMedium
         )
         LazyColumn(
@@ -73,7 +71,7 @@ fun MealPlanScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = dailyPlan.day,
+                            text = dailyPlan.date.format(MealPlanDayFormatter),
                             style = MaterialTheme.typography.titleMedium
                         )
                         dailyPlan.meals.forEach { mealSlot ->
@@ -93,7 +91,7 @@ fun MealPlanScreen(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Add grocery items to auto-build the shopping list",
+                            text = "Tap a recipe to add it here from the Recipes tab",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -103,20 +101,25 @@ fun MealPlanScreen(
     }
 }
 
-data class DailyMealPlan(
-    val day: String,
-    val meals: List<MealSlot>
-)
-
-data class MealSlot(
-    val mealType: String,
-    val recipeName: String
-)
-
 @Preview(showBackground = true)
 @Composable
 private fun MealPlanScreenPreview() {
     CS501MealMapProjectTheme {
-        MealPlanScreen()
+        MealPlanContent(plan = previewWeekPlan())
+    }
+}
+
+private fun previewWeekPlan(): List<DailyMealPlan> {
+    val today = LocalDate.now()
+    return (0 until 7).map { offset ->
+        val date = today.plusDays(offset.toLong())
+        DailyMealPlan(
+            date = date,
+            meals = listOf(
+                MealSlot("Breakfast", "Greek yogurt parfait"),
+                MealSlot("Lunch", "Quinoa bowl"),
+                MealSlot("Dinner", "Oven roasted salmon")
+            )
+        )
     }
 }

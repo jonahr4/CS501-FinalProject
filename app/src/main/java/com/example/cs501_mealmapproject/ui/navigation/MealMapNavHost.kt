@@ -8,12 +8,14 @@ import androidx.navigation.compose.composable
 import com.example.cs501_mealmapproject.ui.dashboard.NutritionDashboardScreen
 import com.example.cs501_mealmapproject.ui.foodlog.FoodLogScreen
 import com.example.cs501_mealmapproject.ui.mealplan.MealPlanScreen
+import com.example.cs501_mealmapproject.ui.mealplan.MealPlanViewModel
 import com.example.cs501_mealmapproject.ui.recipes.RecipeDiscoveryScreen
 import com.example.cs501_mealmapproject.ui.shopping.ShoppingListScreen
 
 @Composable
 fun MealMapNavHost(
     navController: NavHostController,
+    mealPlanViewModel: MealPlanViewModel,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -22,10 +24,10 @@ fun MealMapNavHost(
         modifier = modifier
     ) {
         composable(MealMapDestination.MealPlan.route) {
-            MealPlanScreen()
+            MealPlanScreen(mealPlanViewModel = mealPlanViewModel)
         }
         composable(MealMapDestination.Recipes.route) {
-            RecipeDiscoveryScreen()
+            RecipeDiscoveryScreen(mealPlanViewModel = mealPlanViewModel)
         }
         composable(MealMapDestination.FoodLog.route) {
             FoodLogScreen()

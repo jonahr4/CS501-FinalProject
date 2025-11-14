@@ -11,22 +11,32 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
-
-private val sampleMetrics = listOf(
-    NutritionMetric(label = "Calories", value = "1,850 / 2,000", status = "92% of goal"),
-    NutritionMetric(label = "Protein", value = "110g / 125g", status = "+2 day streak"),
-    NutritionMetric(label = "Carbs", value = "210g / 230g", status = "on track"),
-    NutritionMetric(label = "Fats", value = "60g / 70g", status = "slightly low")
-)
 
 @Composable
 fun NutritionDashboardScreen(
     modifier: Modifier = Modifier,
-    metrics: List<NutritionMetric> = sampleMetrics
+    viewModel: NutritionDashboardViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    NutritionDashboardContent(
+        modifier = modifier,
+        metrics = uiState.metrics
+    )
+}
+
+// Composable function for dashboard. Currently using placeholder info
+// TODO: Implement Dashboard with real data.
+@Composable
+private fun NutritionDashboardContent(
+    modifier: Modifier = Modifier,
+    metrics: List<NutritionMetric>
 ) {
     Column(
         modifier = modifier
@@ -35,12 +45,12 @@ fun NutritionDashboardScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Track progress without the spreadsheets",
+            text = "Progress Tracking",
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Daily streaks, macro breakdowns, and GPS-powered grocery nudges surface right when you need them.",
-            style = MaterialTheme.typography.bodyMedium
+            text = "TODO: Implement Dashboard",
+            style = MaterialTheme.typography.titleMedium
         )
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -86,7 +96,7 @@ fun NutritionDashboardScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Engagement highlights",
+                    text = "Engagement highlights PLACEHOLDER",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
@@ -102,16 +112,10 @@ fun NutritionDashboardScreen(
     }
 }
 
-data class NutritionMetric(
-    val label: String,
-    val value: String,
-    val status: String
-)
-
 @Preview(showBackground = true)
 @Composable
 private fun NutritionDashboardPreview() {
     CS501MealMapProjectTheme {
-        NutritionDashboardScreen()
+        NutritionDashboardContent(metrics = NutritionDashboardUiState().metrics)
     }
 }

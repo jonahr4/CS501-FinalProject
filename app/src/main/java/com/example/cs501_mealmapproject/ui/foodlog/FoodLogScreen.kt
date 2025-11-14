@@ -14,14 +14,32 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
 @Composable
 fun FoodLogScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    foodLogViewModel: FoodLogViewModel = viewModel()
+) {
+    val uiState by foodLogViewModel.uiState.collectAsState()
+    FoodLogContent(
+        modifier = modifier,
+        recentLogs = uiState.recentLogs
+    )
+}
+
+// Composable function for foodLogging. Currently using placeholder info
+// TODO: Implement Food Logging Functionality
+@Composable
+private fun FoodLogContent(
+    modifier: Modifier = Modifier,
+    recentLogs: List<FoodLogEntry>
 ) {
     Column(
         modifier = modifier
@@ -30,11 +48,11 @@ fun FoodLogScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Log meals in seconds",
+            text = "Log meals",
             style = MaterialTheme.typography.titleLarge
         )
         Text(
-            text = "Use the barcode scanner for packaged items or capture a meal photo for quick tagging and nutrition lookup.",
+            text = "Use the barcode scanner to autofill or log food manually.",
             style = MaterialTheme.typography.bodyMedium
         )
         Card(
@@ -58,10 +76,6 @@ fun FoodLogScreen(
                 OutlinedButton(onClick = { }) {
                     Text("Log manually")
                 }
-                Text(
-                    text = "If barcode data is missing, MealMap falls back to a guided manual entry with recent items pre-filled.",
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
         }
         Card(
@@ -76,29 +90,21 @@ fun FoodLogScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Recent logs",
+                    text = "Recent logs PLACEHOLDER",
                     style = MaterialTheme.typography.titleMedium
                 )
-                listOf(
-                    "Breakfast • Greek yogurt parfait" to "Logged via barcode",
-                    "Lunch • Chickpea wrap" to "Manual entry with substitutions"
-                ).forEach { (meal, source) ->
+                recentLogs.forEach { entry ->
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = meal,
+                            text = entry.meal,
                             style = MaterialTheme.typography.bodyLarge
                         )
                         Text(
-                            text = source,
+                            text = entry.source,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Tap an entry to edit servings or add notes for streak tracking.",
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
         }
     }
@@ -108,6 +114,6 @@ fun FoodLogScreen(
 @Composable
 private fun FoodLogScreenPreview() {
     CS501MealMapProjectTheme {
-        FoodLogScreen()
+        FoodLogContent(recentLogs = FoodLogUiState().recentLogs)
     }
 }
