@@ -78,7 +78,6 @@ fun MealMapApp() {
             val currentRoute = backStackEntry?.destination?.route
             val activeDestination = destinations.firstOrNull { it.route == currentRoute }
             val mealPlanViewModel: MealPlanViewModel = viewModel()
-            Log.d("MealMapApp", "Created MealPlanViewModel instance=${System.identityHashCode(mealPlanViewModel)}")
 
             Scaffold(
                 topBar = {

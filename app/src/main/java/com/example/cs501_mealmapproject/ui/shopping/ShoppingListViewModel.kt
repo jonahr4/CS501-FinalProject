@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import android.util.Log
 
 class ShoppingListViewModel : ViewModel() {
 
@@ -16,12 +17,13 @@ class ShoppingListViewModel : ViewModel() {
             val newSections = state.sections.mapIndexed { sIdx, section ->
                 if (sIdx != sectionIndex) return@mapIndexed section
                 val newItems = section.items.mapIndexed { iIdx, item ->
-                    if (iIdx != itemIndex) item.copy(checked = checked) else item
+                    if (iIdx == itemIndex) item.copy(checked = checked) else item
                 }
                 section.copy(items = newItems)
             }
             state.copy(sections = newSections)
         }
+        
     }
 }
 

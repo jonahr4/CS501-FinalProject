@@ -32,7 +32,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
             }
             state.copy(plan = updatedPlan)
         }
-        Log.d("MealPlanVM", "Assigned recipe '$recipeName' to $mealType on $date")
+        
         savePlanToPrefs()
     }
 

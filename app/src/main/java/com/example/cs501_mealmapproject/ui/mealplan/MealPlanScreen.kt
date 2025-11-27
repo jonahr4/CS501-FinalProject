@@ -42,7 +42,7 @@ private fun MealPlanContent(
     modifier: Modifier = Modifier,
     plan: List<DailyMealPlan>
 ) {
-    Log.d("MealPlanUI", "MealPlanContent recomposed with plan size=${plan.size}")
+    
     Column(
         modifier = modifier
             .fillMaxWidth()

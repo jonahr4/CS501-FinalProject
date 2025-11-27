@@ -6,58 +6,33 @@ import com.example.cs501_mealmapproject.network.MealDto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
-// Repository that uses Retrofit/Moshi (`MealApi`) to fetch and map meals from TheMealDB.
-// It attempts Retrofit first and falls back to a manual HTTP+JSON parser if needed.
+// Repository that uses Retrofit/Moshi to fetch and map meals from TheMealDB.
 class RecipeDiscoveryRepository(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val api: MealApi = MealApi
 ) {
 
     suspend fun searchRecipes(query: String): List<RecipeSummary> = withContext(dispatcher) {
-        // Try Retrofit/Moshi path first
         try {
+            Log.d("RecipeRepo", "Starting search for query='$query'")
             val response = api.retrofitService.searchMeals(query)
+            Log.d("RecipeRepo", "Got response: meals=${response.meals?.size ?: 0}")
+            
             val meals = response.meals
-            if (!meals.isNullOrEmpty()) {
-                Log.d("RecipeRepo", "Retrofit returned ${meals.size} meals for query='$query'")
-                return@withContext meals.mapNotNull { it.toRecipeSummary() }
+            return@withContext if (!meals.isNullOrEmpty()) {
+                val mapped = meals.mapNotNull { dto ->
+                    Log.d("RecipeRepo", "Mapping meal: ${dto.strMeal}")
+                    dto.toRecipeSummary()
+                }
+                Log.d("RecipeRepo", "Mapped ${mapped.size} recipes")
+                mapped
             } else {
-                Log.w("RecipeRepo", "Retrofit returned empty meals for query='$query'")
+                Log.w("RecipeRepo", "Response meals list is null or empty")
+                emptyList()
             }
         } catch (e: Exception) {
-            Log.e("RecipeRepo", "Retrofit search failed for query='$query'", e)
-            // allow fallthrough to backup parser
-        }
-
-        // Fallback: manual HTTP call + JSONObject parsing
-        try {
-            val encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString())
-            val url = URL("https://www.themealdb.com/api/json/v1/1/search.php?s=$encodedQuery")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 10_000
-                readTimeout = 10_000
-            }
-            try {
-                if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                    return@withContext emptyList()
-                }
-                val response = connection.inputStream.use { stream ->
-                    BufferedReader(InputStreamReader(stream)).use { it.readText() }
-                }
-                return@withContext parseMeals(response)
-            } finally {
-                connection.disconnect()
-            }
-        } catch (e: Exception) {
+            Log.e("RecipeRepo", "Search failed for query='$query'", e)
             e.printStackTrace()
             return@withContext emptyList()
         }
@@ -128,61 +103,5 @@ class RecipeDiscoveryRepository(
         return items
     }
 
-    private fun parseMeals(rawJson: String): List<RecipeSummary> {
-        val root = JSONObject(rawJson)
-        val mealsArray = root.optJSONArray("meals") ?: return emptyList()
-        return buildList {
-            for (index in 0 until mealsArray.length()) {
-                val meal = mealsArray.optJSONObject(index) ?: continue
-                add(meal.toRecipeSummary())
-            }
-        }
-    }
 
-    // JSONObject extension used by the fallback parser
-    private fun org.json.JSONObject.toRecipeSummary(): RecipeSummary {
-        val subtitleParts = listOfNotNull(
-            optString("strArea").takeIf { it.isNotBlank() },
-            optString("strCategory").takeIf { it.isNotBlank() }
-        )
-        val tags = when (val rawTags = optString("strTags")) {
-            null, "null", "" -> emptyList()
-            else -> rawTags.split(',').mapNotNull { it.trim().takeIf(String::isNotEmpty) }
-        }
-        val instructions = optString("strInstructions").orEmpty().trim()
-        val shortDescription = instructions.lineSequence().firstOrNull()?.take(140)
-            ?: "Tap to view recipe details"
-        val imageUrl = optString("strMealThumb").takeIf { it.isNotBlank() && it != "null" }
-        val sourceUrl = optString("strSource").takeIf { it.isNotBlank() && it != "null" }
-            ?: optString("idMeal").takeIf { it.isNotBlank() && it != "null" }?.let { id ->
-                "https://www.themealdb.com/meal/$id"
-            }
-
-        return RecipeSummary(
-            title = optString("strMeal"),
-            subtitle = subtitleParts.joinToString(separator = " • ").ifBlank { "Meal inspiration" },
-            description = shortDescription,
-            tags = if (tags.isNotEmpty()) tags else listOf("Source: TheMealDB"),
-            imageUrl = imageUrl,
-            instructions = instructions.ifBlank { "Detailed instructions coming soon." },
-            ingredients = buildIngredientListFromJson(this),
-            sourceUrl = sourceUrl
-        )
-    }
-
-    private fun buildIngredientListFromJson(obj: org.json.JSONObject): List<String> {
-        val items = mutableListOf<String>()
-        for (index in 1..20) {
-            val ingredient = obj.optString("strIngredient$index").orEmpty().trim()
-            if (ingredient.isEmpty() || ingredient.equals("null", ignoreCase = true)) continue
-            val measure = obj.optString("strMeasure$index").orEmpty().trim()
-            val entry = if (measure.isNotEmpty() && !measure.equals("null", ignoreCase = true)) {
-                "$measure $ingredient".trim()
-            } else {
-                ingredient
-            }
-            items += entry
-        }
-        return items
-    }
 }

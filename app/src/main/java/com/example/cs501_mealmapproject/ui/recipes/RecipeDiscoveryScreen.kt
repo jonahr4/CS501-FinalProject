@@ -38,7 +38,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import android.util.Log
+
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -75,7 +81,9 @@ fun RecipeDiscoveryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val planState by mealPlanViewModel.uiState.collectAsState()
-    Log.d("RecipeUI", "RecipeDiscoveryScreen received MealPlanViewModel instance=${System.identityHashCode(mealPlanViewModel)}")
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
     var selectedRecipe by remember { mutableStateOf<RecipeSummary?>(null) }
     var plannerTarget by remember { mutableStateOf<RecipeSummary?>(null) }
     var showPlannerSuccess by remember { mutableStateOf(false) }
@@ -136,34 +144,29 @@ fun RecipeDiscoveryScreen(
     }
 
     plannerTarget?.let { recipe ->
-            PlannerSelectionDialog(
-                recipe = recipe,
-                plan = planState.plan,
-                onConfirm = { selections ->
-                    selections.forEach { (day, mealType) ->
-                        mealPlanViewModel.assignMeal(day.date, mealType, recipe.title)
-                    }
-                    plannerTarget = null
-                    selectedRecipe = null
-                    showPlannerSuccess = true
-                    // optionally navigate to the Meal Plan to make the change visible
-                    onRecipeAdded?.invoke()
-                },
-                onDismiss = { plannerTarget = null }
-            )
-    }
-
-    if (showPlannerSuccess) {
-        AlertDialog(
-            onDismissRequest = { showPlannerSuccess = false },
-            text = { Text("Recipe added to planner") },
-            confirmButton = {
-                TextButton(onClick = { showPlannerSuccess = false }) {
-                    Text("OK")
+        PlannerSelectionDialog(
+            recipe = recipe,
+            plan = planState.plan,
+            onConfirm = { selections ->
+                selections.forEach { (day, mealType) ->
+                    mealPlanViewModel.assignMeal(day.date, mealType, recipe.title)
                 }
-            }
+                plannerTarget = null
+                selectedRecipe = null
+                showPlannerSuccess = true
+                // optionally navigate to the Meal Plan to make the change visible
+                onRecipeAdded?.invoke()
+                // show a snackbar confirmation
+                snackbarScope.launch {
+                    snackbarHostState.showSnackbar("Added '${recipe.title}' to planner")
+                }
+            },
+            onDismiss = { plannerTarget = null }
         )
     }
+
+    // Snackbar host to display success messages
+    SnackbarHost(hostState = snackbarHostState)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -379,10 +382,7 @@ private fun RecipeDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                Log.d("RecipeUI", "Add-to-planner clicked for recipe='${recipe.title}'")
-                onAddToPlanner()
-            }) {
+            TextButton(onClick = { onAddToPlanner() }) {
                 Text("Add to planner")
             }
         },
@@ -505,7 +505,7 @@ private fun PlannerSelectionDialog(
                 if (selectedSlots.isEmpty()) {
                     showValidationError = true
                 } else {
-                    Log.d("PlannerDialog", "Selected slots = $selectedSlots for recipe='${recipe.title}'")
+                    
                     onConfirm(selectedSlots)
                     showValidationError = false
                 }

@@ -13,10 +13,12 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import android.util.Log
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -84,20 +86,22 @@ private fun ShoppingListContent(
                             style = MaterialTheme.typography.titleMedium
                         )
                         section.items.forEachIndexed { itemIndex, item ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = item.name,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Checkbox(
-                                    checked = item.checked,
-                                    onCheckedChange = { checked ->
-                                        onToggle(sectionIndex, itemIndex, checked)
-                                    }
-                                )
+                            key("section-${sectionIndex}-item-${item.name}") {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = item.name,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Checkbox(
+                                        checked = item.checked,
+                                        onCheckedChange = { checked ->
+                                            onToggle(sectionIndex, itemIndex, checked)
+                                        }
+                                    )
+                                }
                             }
                         }
                         Text(
