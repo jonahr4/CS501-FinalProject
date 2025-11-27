@@ -64,6 +64,17 @@ dependencies {
     kapt("com.squareup.moshi:moshi-kotlin-codegen:1.15.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
+    // CameraX dependencies for barcode scanning
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+    
+    // ML Kit barcode scanning
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+    
+    // Accompanist permissions for camera permission handling
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
     // Corrected the alias for the Google Fonts dependency
     implementation(libs.google.fonts)
 

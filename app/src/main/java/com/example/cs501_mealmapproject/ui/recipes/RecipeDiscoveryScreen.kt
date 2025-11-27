@@ -88,51 +88,59 @@ fun RecipeDiscoveryScreen(
     var plannerTarget by remember { mutableStateOf<RecipeSummary?>(null) }
     var showPlannerSuccess by remember { mutableStateOf(false) }
 
-    when {
-        uiState.isLoading -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        }
-
-        uiState.errorMessage != null -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+    Box(modifier = modifier.fillMaxSize()) {
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = uiState.errorMessage ?: "Unable to load recipes",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Button(onClick = { viewModel.performSearch() }) {
-                        Text("Try again")
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.errorMessage != null -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = uiState.errorMessage ?: "Unable to load recipes",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Button(onClick = { viewModel.performSearch() }) {
+                            Text("Try again")
+                        }
                     }
                 }
             }
+
+            else -> {
+                RecipeDiscoveryContent(
+                    modifier = Modifier,
+                    recipes = uiState.recipes,
+                    query = uiState.query,
+                    onQueryChange = viewModel::onQueryChange,
+                    onSearch = viewModel::performSearch,
+                    onRecipeClick = { recipe -> selectedRecipe = recipe },
+                    onQuickTest = {
+                        // quick debug action: set query to 'chicken' and run search
+                        viewModel.onQueryChange("chicken")
+                        viewModel.performSearch()
+                    }
+                )
+            }
         }
 
-        else -> {
-            RecipeDiscoveryContent(
-                modifier = modifier,
-                recipes = uiState.recipes,
-                query = uiState.query,
-                onQueryChange = viewModel::onQueryChange,
-                onSearch = viewModel::performSearch,
-                onRecipeClick = { recipe -> selectedRecipe = recipe },
-                onQuickTest = {
-                    // quick debug action: set query to 'chicken' and run search
-                    viewModel.onQueryChange("chicken")
-                    viewModel.performSearch()
-                }
-            )
-        }
+        // Snackbar host positioned at bottom of screen
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     selectedRecipe?.let { recipe ->
@@ -154,19 +162,16 @@ fun RecipeDiscoveryScreen(
                 plannerTarget = null
                 selectedRecipe = null
                 showPlannerSuccess = true
-                // optionally navigate to the Meal Plan to make the change visible
-                onRecipeAdded?.invoke()
-                // show a snackbar confirmation
+                // show snackbar then navigate after a brief delay
                 snackbarScope.launch {
                     snackbarHostState.showSnackbar("Added '${recipe.title}' to planner")
+                    kotlinx.coroutines.delay(1500)
+                    onRecipeAdded?.invoke()
                 }
             },
             onDismiss = { plannerTarget = null }
         )
     }
-
-    // Snackbar host to display success messages
-    SnackbarHost(hostState = snackbarHostState)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
