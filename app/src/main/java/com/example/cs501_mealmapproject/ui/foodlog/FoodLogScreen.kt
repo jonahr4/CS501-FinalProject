@@ -46,13 +46,8 @@ fun FoodLogScreen(
             BarcodeScannerView(
                 onBarcodeDetected = { barcode ->
                     android.util.Log.d("FoodLogScreen", "Barcode detected: $barcode")
-                    foodLogViewModel.addLog(
-                        FoodLogEntry(
-                            meal = "Barcode: $barcode",
-                            source = "Scanned"
-                        )
-                    )
-                    android.util.Log.d("FoodLogScreen", "Log added, closing scanner")
+                    foodLogViewModel.addLogFromBarcode(barcode)
+                    android.util.Log.d("FoodLogScreen", "Fetching product info, closing scanner")
                     showScanner = false
                 },
                 modifier = Modifier.fillMaxSize()
