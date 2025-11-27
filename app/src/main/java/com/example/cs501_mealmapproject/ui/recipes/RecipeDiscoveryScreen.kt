@@ -38,6 +38,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -69,10 +70,12 @@ import java.time.LocalDate
 fun RecipeDiscoveryScreen(
     mealPlanViewModel: MealPlanViewModel,
     modifier: Modifier = Modifier,
-    viewModel: RecipeDiscoveryViewModel = viewModel()
+    viewModel: RecipeDiscoveryViewModel = viewModel(),
+    onRecipeAdded: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val planState by mealPlanViewModel.uiState.collectAsState()
+    Log.d("RecipeUI", "RecipeDiscoveryScreen received MealPlanViewModel instance=${System.identityHashCode(mealPlanViewModel)}")
     var selectedRecipe by remember { mutableStateOf<RecipeSummary?>(null) }
     var plannerTarget by remember { mutableStateOf<RecipeSummary?>(null) }
     var showPlannerSuccess by remember { mutableStateOf(false) }
@@ -114,7 +117,12 @@ fun RecipeDiscoveryScreen(
                 query = uiState.query,
                 onQueryChange = viewModel::onQueryChange,
                 onSearch = viewModel::performSearch,
-                onRecipeClick = { recipe -> selectedRecipe = recipe }
+                onRecipeClick = { recipe -> selectedRecipe = recipe },
+                onQuickTest = {
+                    // quick debug action: set query to 'chicken' and run search
+                    viewModel.onQueryChange("chicken")
+                    viewModel.performSearch()
+                }
             )
         }
     }
@@ -128,19 +136,21 @@ fun RecipeDiscoveryScreen(
     }
 
     plannerTarget?.let { recipe ->
-        PlannerSelectionDialog(
-            recipe = recipe,
-            plan = planState.plan,
-            onConfirm = { selections ->
-                selections.forEach { (day, mealType) ->
-                    mealPlanViewModel.assignMeal(day.date, mealType, recipe.title)
-                }
-                plannerTarget = null
-                selectedRecipe = null
-                showPlannerSuccess = true
-            },
-            onDismiss = { plannerTarget = null }
-        )
+            PlannerSelectionDialog(
+                recipe = recipe,
+                plan = planState.plan,
+                onConfirm = { selections ->
+                    selections.forEach { (day, mealType) ->
+                        mealPlanViewModel.assignMeal(day.date, mealType, recipe.title)
+                    }
+                    plannerTarget = null
+                    selectedRecipe = null
+                    showPlannerSuccess = true
+                    // optionally navigate to the Meal Plan to make the change visible
+                    onRecipeAdded?.invoke()
+                },
+                onDismiss = { plannerTarget = null }
+            )
     }
 
     if (showPlannerSuccess) {
@@ -164,8 +174,10 @@ private fun RecipeDiscoveryContent(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
-    onRecipeClick: (RecipeSummary) -> Unit
+    onRecipeClick: (RecipeSummary) -> Unit,
+    onQuickTest: () -> Unit = {}
 ) {
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -187,8 +199,13 @@ private fun RecipeDiscoveryContent(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        Button(onClick = onSearch) {
-            Text("Search")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onSearch) {
+                Text("Search")
+            }
+            Button(onClick = onQuickTest) {
+                Text("Quick: chicken")
+            }
         }
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -362,7 +379,10 @@ private fun RecipeDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onAddToPlanner) {
+            TextButton(onClick = {
+                Log.d("RecipeUI", "Add-to-planner clicked for recipe='${recipe.title}'")
+                onAddToPlanner()
+            }) {
                 Text("Add to planner")
             }
         },
@@ -485,6 +505,7 @@ private fun PlannerSelectionDialog(
                 if (selectedSlots.isEmpty()) {
                     showValidationError = true
                 } else {
+                    Log.d("PlannerDialog", "Selected slots = $selectedSlots for recipe='${recipe.title}'")
                     onConfirm(selectedSlots)
                     showValidationError = false
                 }

@@ -1,6 +1,9 @@
 package com.example.cs501_mealmapproject.ui.mealplan
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
+import android.util.Log
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,9 +11,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class MealPlanViewModel : ViewModel() {
+class MealPlanViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(MealPlanUiState(plan = generateWeekPlan()))
+    private val prefs = application.getSharedPreferences("meal_plan_prefs", Context.MODE_PRIVATE)
+
+    private val _uiState = MutableStateFlow(MealPlanUiState(plan = loadSavedPlan() ?: generateWeekPlan()))
     val uiState: StateFlow<MealPlanUiState> = _uiState.asStateFlow()
 
     fun assignMeal(date: LocalDate, mealType: String, recipeName: String) {
@@ -26,6 +31,52 @@ class MealPlanViewModel : ViewModel() {
                 }
             }
             state.copy(plan = updatedPlan)
+        }
+        Log.d("MealPlanVM", "Assigned recipe '$recipeName' to $mealType on $date")
+        savePlanToPrefs()
+    }
+
+    private fun savePlanToPrefs() {
+        try {
+            val lines = _uiState.value.plan.flatMap { day ->
+                day.meals.map { slot ->
+                    // date|mealType|recipeName (recipeName may contain pipes/newlines so escape by replacing)
+                    val safeRecipe = slot.recipeName.replace("|", "\\|").replace("\n", " ")
+                    "${day.date}|${slot.mealType}|$safeRecipe"
+                }
+            }
+            prefs.edit().putString(PREF_KEY, lines.joinToString("\n")).apply()
+        } catch (e: Exception) {
+            Log.w("MealPlanVM", "Failed to save plan: ${e.message}")
+        }
+    }
+
+    private fun loadSavedPlan(): List<DailyMealPlan>? {
+        val raw = prefs.getString(PREF_KEY, null) ?: return null
+        return try {
+            // parse lines into map(date -> map(mealType -> recipeName))
+            val map = mutableMapOf<LocalDate, MutableMap<String, String>>()
+            raw.lines().forEach { line ->
+                if (line.isBlank()) return@forEach
+                val parts = line.split('|')
+                if (parts.size < 3) return@forEach
+                val date = LocalDate.parse(parts[0])
+                val mealType = parts[1]
+                val recipe = parts.subList(2, parts.size).joinToString("|").replace("\\|", "|")
+                map.getOrPut(date) { mutableMapOf() }[mealType] = recipe
+            }
+            val start = LocalDate.now()
+            (0 until 7).map { offset ->
+                val date = start.plusDays(offset.toLong())
+                val meals = defaultMeals.map { slot ->
+                    val recipe = map[date]?.get(slot.mealType) ?: slot.recipeName
+                    slot.copy(recipeName = recipe)
+                }
+                DailyMealPlan(date = date, meals = meals)
+            }
+        } catch (e: Exception) {
+            Log.w("MealPlanVM", "Failed to load saved plan: ${e.message}")
+            null
         }
     }
 
@@ -45,6 +96,7 @@ class MealPlanViewModel : ViewModel() {
             MealSlot("Lunch", "Tap to add a recipe"),
             MealSlot("Dinner", "Tap to add a recipe")
         )
+        private const val PREF_KEY = "meal_plan_serialized_v1"
     }
 }
 

@@ -1,5 +1,6 @@
 package com.example.cs501_mealmapproject.ui.recipes
 
+import android.util.Log
 import com.example.cs501_mealmapproject.network.MealApi
 import com.example.cs501_mealmapproject.network.MealDto
 import kotlinx.coroutines.CoroutineDispatcher
@@ -26,9 +27,13 @@ class RecipeDiscoveryRepository(
             val response = api.retrofitService.searchMeals(query)
             val meals = response.meals
             if (!meals.isNullOrEmpty()) {
+                Log.d("RecipeRepo", "Retrofit returned ${meals.size} meals for query='$query'")
                 return@withContext meals.mapNotNull { it.toRecipeSummary() }
+            } else {
+                Log.w("RecipeRepo", "Retrofit returned empty meals for query='$query'")
             }
         } catch (e: Exception) {
+            Log.e("RecipeRepo", "Retrofit search failed for query='$query'", e)
             // allow fallthrough to backup parser
         }
 

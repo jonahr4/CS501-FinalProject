@@ -30,7 +30,8 @@ fun FoodLogScreen(
     val uiState by foodLogViewModel.uiState.collectAsState()
     FoodLogContent(
         modifier = modifier,
-        recentLogs = uiState.recentLogs
+        recentLogs = uiState.recentLogs,
+        onAddLog = { foodLogViewModel.addLog(FoodLogEntry(meal = "Manual • Avocado toast", source = "Manual entry")) }
     )
 }
 
@@ -39,7 +40,8 @@ fun FoodLogScreen(
 @Composable
 private fun FoodLogContent(
     modifier: Modifier = Modifier,
-    recentLogs: List<FoodLogEntry>
+    recentLogs: List<FoodLogEntry>,
+    onAddLog: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -70,10 +72,10 @@ private fun FoodLogContent(
                     text = "Capture options",
                     style = MaterialTheme.typography.titleMedium
                 )
-                FilledTonalButton(onClick = { }) {
+                FilledTonalButton(onClick = { /* TODO: wire barcode scanning */ }) {
                     Text("Scan barcode")
                 }
-                OutlinedButton(onClick = { }) {
+                OutlinedButton(onClick = { onAddLog() }) {
                     Text("Log manually")
                 }
             }
@@ -90,7 +92,7 @@ private fun FoodLogContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Recent logs PLACEHOLDER",
+                    text = "Recent logs",
                     style = MaterialTheme.typography.titleMedium
                 )
                 recentLogs.forEach { entry ->

@@ -80,7 +80,8 @@ object MealApi {
 
     private fun provideOkHttpClient(): OkHttpClient {
         val logging = HttpLoggingInterceptor()
-        logging.level = HttpLoggingInterceptor.Level.BASIC
+        // Use BODY during debug to see request/response payloads
+        logging.level = HttpLoggingInterceptor.Level.BODY
 
         return OkHttpClient.Builder()
             .addInterceptor(logging)

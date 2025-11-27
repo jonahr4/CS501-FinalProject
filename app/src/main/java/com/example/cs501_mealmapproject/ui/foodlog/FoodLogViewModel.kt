@@ -4,11 +4,18 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 class FoodLogViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(FoodLogUiState())
     val uiState: StateFlow<FoodLogUiState> = _uiState.asStateFlow()
+
+    fun addLog(entry: FoodLogEntry) {
+        _uiState.update { state ->
+            state.copy(recentLogs = listOf(entry) + state.recentLogs)
+        }
+    }
 }
 
 data class FoodLogUiState(

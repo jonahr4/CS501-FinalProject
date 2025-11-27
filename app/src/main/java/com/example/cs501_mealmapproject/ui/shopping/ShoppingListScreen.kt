@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -31,7 +31,10 @@ fun ShoppingListScreen(
     val uiState by viewModel.uiState.collectAsState()
     ShoppingListContent(
         modifier = modifier,
-        sections = uiState.sections
+        sections = uiState.sections,
+        onToggle = { sectionIndex, itemIndex, checked ->
+            viewModel.toggleItem(sectionIndex, itemIndex, checked)
+        }
     )
 }
 
@@ -40,7 +43,8 @@ fun ShoppingListScreen(
 @Composable
 private fun ShoppingListContent(
     modifier: Modifier = Modifier,
-    sections: List<ShoppingSection>
+    sections: List<ShoppingSection>,
+    onToggle: (sectionIndex: Int, itemIndex: Int, checked: Boolean) -> Unit = { _, _, _ -> }
 ) {
     Column(
         modifier = modifier
@@ -63,7 +67,7 @@ private fun ShoppingListContent(
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(sections) { section ->
+            itemsIndexed(sections) { sectionIndex, section ->
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -79,8 +83,7 @@ private fun ShoppingListContent(
                             text = section.title,
                             style = MaterialTheme.typography.titleMedium
                         )
-                        section.items.forEach { item ->
-                            val checkedState = remember(item.name) { mutableStateOf(item.checked) }
+                        section.items.forEachIndexed { itemIndex, item ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -90,8 +93,10 @@ private fun ShoppingListContent(
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Checkbox(
-                                    checked = checkedState.value,
-                                    onCheckedChange = { checkedState.value = it }
+                                    checked = item.checked,
+                                    onCheckedChange = { checked ->
+                                        onToggle(sectionIndex, itemIndex, checked)
+                                    }
                                 )
                             }
                         }

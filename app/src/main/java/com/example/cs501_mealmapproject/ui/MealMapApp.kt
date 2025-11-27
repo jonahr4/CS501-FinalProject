@@ -42,6 +42,7 @@ import com.example.cs501_mealmapproject.ui.navigation.MealMapDestination
 import com.example.cs501_mealmapproject.ui.navigation.MealMapNavHost
 import com.example.cs501_mealmapproject.ui.onboarding.OnboardingScreen
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,6 +78,7 @@ fun MealMapApp() {
             val currentRoute = backStackEntry?.destination?.route
             val activeDestination = destinations.firstOrNull { it.route == currentRoute }
             val mealPlanViewModel: MealPlanViewModel = viewModel()
+            Log.d("MealMapApp", "Created MealPlanViewModel instance=${System.identityHashCode(mealPlanViewModel)}")
 
             Scaffold(
                 topBar = {
