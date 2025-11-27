@@ -45,16 +45,39 @@ fun FoodLogScreen(
         Box(modifier = modifier.fillMaxSize()) {
             BarcodeScannerView(
                 onBarcodeDetected = { barcode ->
+                    android.util.Log.d("FoodLogScreen", "Barcode detected: $barcode")
                     foodLogViewModel.addLog(
                         FoodLogEntry(
                             meal = "Barcode: $barcode",
                             source = "Scanned"
                         )
                     )
+                    android.util.Log.d("FoodLogScreen", "Log added, closing scanner")
                     showScanner = false
                 },
                 modifier = Modifier.fillMaxSize()
             )
+            
+            // Visual indicator overlay
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Point camera at barcode",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "(Emulator camera may show black screen - this works on real devices)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+            
             IconButton(
                 onClick = { showScanner = false },
                 modifier = Modifier
@@ -63,7 +86,8 @@ fun FoodLogScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Close scanner"
+                    contentDescription = "Close scanner",
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
