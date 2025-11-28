@@ -1,25 +1,36 @@
 package com.example.cs501_mealmapproject.ui.foodlog
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.cs501_mealmapproject.ui.scanner.BarcodeScannerView
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
 @Composable
@@ -28,10 +39,61 @@ fun FoodLogScreen(
     foodLogViewModel: FoodLogViewModel = viewModel()
 ) {
     val uiState by foodLogViewModel.uiState.collectAsState()
-    FoodLogContent(
-        modifier = modifier,
-        recentLogs = uiState.recentLogs
-    )
+    var showScanner by remember { mutableStateOf(false) }
+
+    if (showScanner) {
+        Box(modifier = modifier.fillMaxSize()) {
+            BarcodeScannerView(
+                onBarcodeDetected = { barcode ->
+                    android.util.Log.d("FoodLogScreen", "Barcode detected: $barcode")
+                    foodLogViewModel.addLogFromBarcode(barcode)
+                    android.util.Log.d("FoodLogScreen", "Fetching product info, closing scanner")
+                    showScanner = false
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+            
+            // Visual indicator overlay
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Point camera at barcode",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "(Emulator camera may show black screen - this works on real devices)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+            
+            IconButton(
+                onClick = { showScanner = false },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close scanner",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    } else {
+        FoodLogContent(
+            modifier = modifier,
+            recentLogs = uiState.recentLogs,
+            onScanBarcode = { showScanner = true },
+            onAddLog = { foodLogViewModel.addLog(FoodLogEntry(meal = "Manual • Avocado toast", source = "Manual entry")) }
+        )
+    }
 }
 
 // Composable function for foodLogging. Currently using placeholder info
@@ -39,7 +101,9 @@ fun FoodLogScreen(
 @Composable
 private fun FoodLogContent(
     modifier: Modifier = Modifier,
-    recentLogs: List<FoodLogEntry>
+    recentLogs: List<FoodLogEntry>,
+    onScanBarcode: () -> Unit = {},
+    onAddLog: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -70,10 +134,10 @@ private fun FoodLogContent(
                     text = "Capture options",
                     style = MaterialTheme.typography.titleMedium
                 )
-                FilledTonalButton(onClick = { }) {
+                FilledTonalButton(onClick = onScanBarcode) {
                     Text("Scan barcode")
                 }
-                OutlinedButton(onClick = { }) {
+                OutlinedButton(onClick = { onAddLog() }) {
                     Text("Log manually")
                 }
             }
@@ -90,7 +154,7 @@ private fun FoodLogContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Recent logs PLACEHOLDER",
+                    text = "Recent logs",
                     style = MaterialTheme.typography.titleMedium
                 )
                 recentLogs.forEach { entry ->
@@ -114,6 +178,10 @@ private fun FoodLogContent(
 @Composable
 private fun FoodLogScreenPreview() {
     CS501MealMapProjectTheme {
-        FoodLogContent(recentLogs = FoodLogUiState().recentLogs)
+        FoodLogContent(
+            recentLogs = FoodLogUiState().recentLogs,
+            onScanBarcode = {},
+            onAddLog = {}
+        )
     }
 }

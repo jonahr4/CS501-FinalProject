@@ -27,7 +27,10 @@ fun MealMapNavHost(
             MealPlanScreen(mealPlanViewModel = mealPlanViewModel)
         }
         composable(MealMapDestination.Recipes.route) {
-            RecipeDiscoveryScreen(mealPlanViewModel = mealPlanViewModel)
+            RecipeDiscoveryScreen(
+                mealPlanViewModel = mealPlanViewModel,
+                onRecipeAdded = { navController.navigate(MealMapDestination.MealPlan.route) }
+            )
         }
         composable(MealMapDestination.FoodLog.route) {
             FoodLogScreen()

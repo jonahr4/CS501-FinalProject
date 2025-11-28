@@ -16,7 +16,9 @@ data class MealDto(
     @Json(name = "strMeal") val strMeal: String? = null,
     @Json(name = "strCategory") val strCategory: String? = null,
     @Json(name = "strArea") val strArea: String? = null,
+        @Json(name = "strTags") val strTags: String? = null,
     @Json(name = "strInstructions") val strInstructions: String? = null,
+        @Json(name = "strSource") val strSource: String? = null,
     @Json(name = "strMealThumb") val strMealThumb: String? = null,
     @Json(name = "strIngredient1") val strIngredient1: String? = null,
     @Json(name = "strIngredient2") val strIngredient2: String? = null,
@@ -78,7 +80,8 @@ object MealApi {
 
     private fun provideOkHttpClient(): OkHttpClient {
         val logging = HttpLoggingInterceptor()
-        logging.level = HttpLoggingInterceptor.Level.BASIC
+        // Use BODY during debug to see request/response payloads
+        logging.level = HttpLoggingInterceptor.Level.BODY
 
         return OkHttpClient.Builder()
             .addInterceptor(logging)

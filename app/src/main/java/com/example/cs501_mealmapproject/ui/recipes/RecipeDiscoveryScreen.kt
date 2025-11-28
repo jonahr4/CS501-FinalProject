@@ -38,6 +38,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -69,54 +76,71 @@ import java.time.LocalDate
 fun RecipeDiscoveryScreen(
     mealPlanViewModel: MealPlanViewModel,
     modifier: Modifier = Modifier,
-    viewModel: RecipeDiscoveryViewModel = viewModel()
+    viewModel: RecipeDiscoveryViewModel = viewModel(),
+    onRecipeAdded: (() -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val planState by mealPlanViewModel.uiState.collectAsState()
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
     var selectedRecipe by remember { mutableStateOf<RecipeSummary?>(null) }
     var plannerTarget by remember { mutableStateOf<RecipeSummary?>(null) }
     var showPlannerSuccess by remember { mutableStateOf(false) }
 
-    when {
-        uiState.isLoading -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        }
-
-        uiState.errorMessage != null -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+    Box(modifier = modifier.fillMaxSize()) {
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = uiState.errorMessage ?: "Unable to load recipes",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Button(onClick = { viewModel.performSearch() }) {
-                        Text("Try again")
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.errorMessage != null -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = uiState.errorMessage ?: "Unable to load recipes",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Button(onClick = { viewModel.performSearch() }) {
+                            Text("Try again")
+                        }
                     }
                 }
             }
+
+            else -> {
+                RecipeDiscoveryContent(
+                    modifier = Modifier,
+                    recipes = uiState.recipes,
+                    query = uiState.query,
+                    onQueryChange = viewModel::onQueryChange,
+                    onSearch = viewModel::performSearch,
+                    onRecipeClick = { recipe -> selectedRecipe = recipe },
+                    onQuickTest = {
+                        // quick debug action: set query to 'chicken' and run search
+                        viewModel.onQueryChange("chicken")
+                        viewModel.performSearch()
+                    }
+                )
+            }
         }
 
-        else -> {
-            RecipeDiscoveryContent(
-                modifier = modifier,
-                recipes = uiState.recipes,
-                query = uiState.query,
-                onQueryChange = viewModel::onQueryChange,
-                onSearch = viewModel::performSearch,
-                onRecipeClick = { recipe -> selectedRecipe = recipe }
-            )
-        }
+        // Snackbar host positioned at bottom of screen
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     selectedRecipe?.let { recipe ->
@@ -138,20 +162,14 @@ fun RecipeDiscoveryScreen(
                 plannerTarget = null
                 selectedRecipe = null
                 showPlannerSuccess = true
+                // show snackbar then navigate after a brief delay
+                snackbarScope.launch {
+                    snackbarHostState.showSnackbar("Added '${recipe.title}' to planner")
+                    kotlinx.coroutines.delay(1500)
+                    onRecipeAdded?.invoke()
+                }
             },
             onDismiss = { plannerTarget = null }
-        )
-    }
-
-    if (showPlannerSuccess) {
-        AlertDialog(
-            onDismissRequest = { showPlannerSuccess = false },
-            text = { Text("Recipe added to planner") },
-            confirmButton = {
-                TextButton(onClick = { showPlannerSuccess = false }) {
-                    Text("OK")
-                }
-            }
         )
     }
 }
@@ -164,8 +182,10 @@ private fun RecipeDiscoveryContent(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
-    onRecipeClick: (RecipeSummary) -> Unit
+    onRecipeClick: (RecipeSummary) -> Unit,
+    onQuickTest: () -> Unit = {}
 ) {
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -187,8 +207,13 @@ private fun RecipeDiscoveryContent(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        Button(onClick = onSearch) {
-            Text("Search")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onSearch) {
+                Text("Search")
+            }
+            Button(onClick = onQuickTest) {
+                Text("Quick: chicken")
+            }
         }
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -362,7 +387,7 @@ private fun RecipeDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onAddToPlanner) {
+            TextButton(onClick = { onAddToPlanner() }) {
                 Text("Add to planner")
             }
         },
@@ -485,6 +510,7 @@ private fun PlannerSelectionDialog(
                 if (selectedSlots.isEmpty()) {
                     showValidationError = true
                 } else {
+                    
                     onConfirm(selectedSlots)
                     showValidationError = false
                 }

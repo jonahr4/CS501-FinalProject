@@ -42,6 +42,7 @@ import com.example.cs501_mealmapproject.ui.navigation.MealMapDestination
 import com.example.cs501_mealmapproject.ui.navigation.MealMapNavHost
 import com.example.cs501_mealmapproject.ui.onboarding.OnboardingScreen
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
