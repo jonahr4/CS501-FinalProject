@@ -40,6 +40,23 @@ fun FoodLogScreen(
 ) {
     val uiState by foodLogViewModel.uiState.collectAsState()
     var showScanner by remember { mutableStateOf(false) }
+    var showManualEntryDialog by remember { mutableStateOf(false) }
+
+    if (showManualEntryDialog) {
+        ManualEntryDialog(
+            onDismiss = { showManualEntryDialog = false },
+            onConfirm = { entry ->
+                foodLogViewModel.addManualLog(
+                    mealName = entry.mealName,
+                    calories = entry.calories,
+                    protein = entry.protein,
+                    carbs = entry.carbs,
+                    fat = entry.fat
+                )
+                showManualEntryDialog = false
+            }
+        )
+    }
 
     if (showScanner) {
         Box(modifier = modifier.fillMaxSize()) {
@@ -91,7 +108,7 @@ fun FoodLogScreen(
             modifier = modifier,
             recentLogs = uiState.recentLogs,
             onScanBarcode = { showScanner = true },
-            onAddLog = { foodLogViewModel.addLog(FoodLogEntry(meal = "Manual • Avocado toast", source = "Manual entry")) }
+            onAddLog = { showManualEntryDialog = true }
         )
     }
 }
@@ -157,16 +174,35 @@ private fun FoodLogContent(
                     text = "Recent logs",
                     style = MaterialTheme.typography.titleMedium
                 )
-                recentLogs.forEach { entry ->
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = entry.meal,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Text(
-                            text = entry.source,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                if (recentLogs.isEmpty()) {
+                    Text(
+                        text = "No logs yet. Scan a barcode or log manually to get started.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    recentLogs.forEach { entry ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = entry.meal,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = "${entry.calories} cal | P: ${entry.protein}g | C: ${entry.carbs}g | F: ${entry.fat}g",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = entry.source,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -179,7 +215,24 @@ private fun FoodLogContent(
 private fun FoodLogScreenPreview() {
     CS501MealMapProjectTheme {
         FoodLogContent(
-            recentLogs = FoodLogUiState().recentLogs,
+            recentLogs = listOf(
+                FoodLogEntry(
+                    meal = "Greek Yogurt Parfait",
+                    calories = 250,
+                    protein = 15f,
+                    carbs = 30f,
+                    fat = 8f,
+                    source = "Manual entry"
+                ),
+                FoodLogEntry(
+                    meal = "Chicken Breast",
+                    calories = 165,
+                    protein = 31f,
+                    carbs = 0f,
+                    fat = 3.6f,
+                    source = "Scanned • Barcode: 123456"
+                )
+            ),
             onScanBarcode = {},
             onAddLog = {}
         )
