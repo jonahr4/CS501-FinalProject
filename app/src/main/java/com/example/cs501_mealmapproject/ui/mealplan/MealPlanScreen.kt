@@ -1,5 +1,6 @@
 package com.example.cs501_mealmapproject.ui.mealplan
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,12 +27,14 @@ import java.time.LocalDate
 @Composable
 fun MealPlanScreen(
     mealPlanViewModel: MealPlanViewModel,
+    onNavigateToRecipes: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by mealPlanViewModel.uiState.collectAsState()
     MealPlanContent(
         modifier = modifier,
-        plan = uiState.plan
+        plan = uiState.plan,
+        onNavigateToRecipes = onNavigateToRecipes
     )
 }
 
@@ -40,7 +43,8 @@ fun MealPlanScreen(
 @Composable
 private fun MealPlanContent(
     modifier: Modifier = Modifier,
-    plan: List<DailyMealPlan>
+    plan: List<DailyMealPlan>,
+    onNavigateToRecipes: () -> Unit = {}
 ) {
     
     Column(
@@ -93,8 +97,10 @@ private fun MealPlanContent(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Tap a recipe to add it here from the Recipes tab",
-                            style = MaterialTheme.typography.bodySmall
+                            text = "Tap here to add recipes",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { onNavigateToRecipes() }
                         )
                     }
                 }
@@ -107,7 +113,10 @@ private fun MealPlanContent(
 @Composable
 private fun MealPlanScreenPreview() {
     CS501MealMapProjectTheme {
-        MealPlanContent(plan = previewWeekPlan())
+        MealPlanContent(
+            plan = previewWeekPlan(),
+            onNavigateToRecipes = {}
+        )
     }
 }
 

@@ -24,7 +24,14 @@ fun MealMapNavHost(
         modifier = modifier
     ) {
         composable(MealMapDestination.MealPlan.route) {
-            MealPlanScreen(mealPlanViewModel = mealPlanViewModel)
+            MealPlanScreen(
+                mealPlanViewModel = mealPlanViewModel,
+                onNavigateToRecipes = {
+                    navController.navigate(MealMapDestination.Recipes.route) {
+                        launchSingleTop = true
+                    }
+                }
+            )
         }
         composable(MealMapDestination.Recipes.route) {
             RecipeDiscoveryScreen(

@@ -99,11 +99,10 @@ fun MealMapApp() {
                                 onClick = {
                                     if (!selected) {
                                         navController.navigate(destination.route) {
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
+                                            popUpTo(MealMapDestination.MealPlan.route) {
+                                                inclusive = false
                                             }
                                             launchSingleTop = true
-                                            restoreState = true
                                         }
                                     }
                                 },
