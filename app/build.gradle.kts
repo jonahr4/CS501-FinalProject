@@ -75,6 +75,11 @@ dependencies {
     // Accompanist permissions for camera permission handling
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
 
+    // Room database
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
     // Corrected the alias for the Google Fonts dependency
     implementation(libs.google.fonts)
 
