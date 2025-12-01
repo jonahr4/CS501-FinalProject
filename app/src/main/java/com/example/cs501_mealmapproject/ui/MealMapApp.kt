@@ -125,6 +125,7 @@ fun MealMapApp() {
                 MealMapNavHost(
                     navController = navController,
                     mealPlanViewModel = mealPlanViewModel,
+                    onboardingProfile = sessionState.onboardingProfile,
                     modifier = Modifier.padding(innerPadding)
                 )
             }

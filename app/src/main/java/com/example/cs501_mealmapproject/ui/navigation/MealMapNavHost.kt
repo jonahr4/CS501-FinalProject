@@ -5,10 +5,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.cs501_mealmapproject.ui.SessionViewModel
 import com.example.cs501_mealmapproject.ui.dashboard.NutritionDashboardScreen
 import com.example.cs501_mealmapproject.ui.foodlog.FoodLogScreen
 import com.example.cs501_mealmapproject.ui.mealplan.MealPlanScreen
 import com.example.cs501_mealmapproject.ui.mealplan.MealPlanViewModel
+import com.example.cs501_mealmapproject.ui.onboarding.OnboardingProfile
 import com.example.cs501_mealmapproject.ui.recipes.RecipeDiscoveryScreen
 import com.example.cs501_mealmapproject.ui.shopping.ShoppingListScreen
 
@@ -16,6 +18,7 @@ import com.example.cs501_mealmapproject.ui.shopping.ShoppingListScreen
 fun MealMapNavHost(
     navController: NavHostController,
     mealPlanViewModel: MealPlanViewModel,
+    onboardingProfile: OnboardingProfile?,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -43,7 +46,7 @@ fun MealMapNavHost(
             FoodLogScreen()
         }
         composable(MealMapDestination.Dashboard.route) {
-            NutritionDashboardScreen()
+            NutritionDashboardScreen(onboardingProfile = onboardingProfile)
         }
         composable(MealMapDestination.Shopping.route) {
             ShoppingListScreen()
