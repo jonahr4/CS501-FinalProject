@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -84,6 +86,36 @@ fun MealMapApp() {
                     CenterAlignedTopAppBar(
                         title = {
                             Text(text = activeDestination?.label ?: "MealMap")
+                        },
+                        actions = {
+                            Box {
+                                IconButton(onClick = { showProfileMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AccountCircle,
+                                        contentDescription = "Profile",
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showProfileMenu,
+                                    onDismissRequest = { showProfileMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Reset Goals") },
+                                        onClick = {
+                                            showProfileMenu = false
+                                            sessionViewModel.resetOnboarding()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Sign Out") },
+                                        onClick = {
+                                            showProfileMenu = false
+                                            sessionViewModel.signOut()
+                                        }
+                                    )
+                                }
+                            }
                         }
                     )
                 },
