@@ -1,33 +1,140 @@
 # MealMap
-**Smart Meal Planning & Nutrition Tracker**  
+**Smart Meal Planning & Nutrition Tracker**
 _CS501 Final Project – Jonah Rothman & Abidul Islam_
 
 ---
+### Update - 12/2
+---
 
-### Update – 11/11
+## Feature Status
 
-#### Current Feature Summary
+### ✅ Fully Implemented Features
 
-| Feature | Status | Notes                                                                   |
-|----------|---------|-------------------------------------------------------------------------|
-| **Recipe Discovery** | ✅ Implemented | Integrated with TheMealDB API. Users can browse and view recipe details. |
-| **Meal Planning Calendar** | ✅ Implemented | Weekly meal planner with  persistent storage.                           |
-| **Barcode Food Logging** | ⏳ In Progress | CameraX + ML Kit integration researched and next to implement.          |
-| **Shopping List Generation** | ⏳ In Progress | Auto-generated from weekly meal plan. Need backend logic. |
-| **Nutrition Tracking Dashboard** | ⏳ In Progress | Basic calorie/macro tracking implemented.               |
-| **Smart Ingredient Substitution** | 🕓 Pending | Planned feature to recommend alternatives.                              |
-| **Receipt Scanning / Budget Tracking** | 🕓 Pending | Requires OCR integration; descoped for MVP.                             |
-| **Recipe Sharing** | 🕓 Pending | To be implemented post-MVP as a social feature.                         |
+| Feature | Implementation Details | Technologies |
+|---------|----------------------|--------------|
+| **Recipe Discovery** | Search and browse recipes from TheMealDB API with detailed ingredient lists and instructions | Retrofit, Moshi, Coil |
+| **Meal Planning Calendar** | Weekly meal planner with SharedPreferences persistence. Assign recipes to specific days/meals | SharedPreferences, StateFlow |
+| **Barcode Food Logging** | Scan product barcodes using device camera, fetch nutrition data from OpenFoodFacts API | CameraX, ML Kit Barcode Scanning, Retrofit |
+| **Manual Food Logging** | Input food manually with custom nutrition values (calories, protein, carbs, fat) via dialog form | Jetpack Compose Dialogs, Room Database |
+| **Shopping List Generation** | Auto-generated from weekly meal plan recipes with smart ingredient grouping and duplicate detection | ViewModel, StateFlow |
+| **Nutrition Tracking Dashboard** | Real-time dashboard showing daily calorie and macro progress with visual progress bars | Room Database, Flow, Jetpack Compose |
+| **User Onboarding** | Collect user goals (calorie target, current/goal weight, activity level) to personalize experience | SharedPreferences via SessionViewModel |
+
+### Future Features
+
+| Feature | Status | Reason |
+|---------|--------|--------|
+| **Smart Ingredient Substitution** | Future | Would require additional AI/ML models or API integration |
+| **Receipt Scanning / Budget Tracking** | Future | OCR integration complex; out of MVP scope |
+| **GPS Store Detection** | Future | Location permissions and geofencing added complexity |
+| **Recipe Sharing** | Future | Social features require backend infrastructure |
 
 
-#### Build & Run Instructions
+---
 
-To build and run **MealMap** locally:
+## Core Requirements
+
+### ✅ External API Integration
+- **TheMealDB API**: Recipe search, ingredient lists, cooking instructions
+- **OpenFoodFacts API**: Barcode scanning for nutrition data (calories, macros, product names)
+- Both APIs use Retrofit with Moshi for JSON parsing
+- Error handling with try-catch blocks and fallback UI states
+
+### ✅ Sensor Feature Implementation
+- **CameraX**: Real-time camera preview for barcode scanning
+- **ML Kit Barcode Scanning**: Detects and decodes product barcodes (EAN-13, UPC-A, etc.)
+- Runtime camera permissions via Accompanist Permissions library
+
+### ✅ Local Persistence
+- **Room Database**: Stores food log entries with nutrition data
+  - `FoodLogEntity` table with fields: id, mealName, calories, protein, carbs, fat, source, timestamp
+  - Database version 1 with auto-migration support
+- **SharedPreferences**: Stores user onboarding profile and meal plan data
+  - Calorie targets, weight goals, activity level
+  - Weekly meal assignments persisted across app restarts
+
+### ✅ UI Polish
+- Material 3 Design System with custom theme colors
+- Smooth animations and transitions
+- Progress bars with rounded corners and color coding
+- Consistent spacing and typography
+- Empty state messages and loading indicators
+
+### ✅ Error Handling
+- Network failures display user-friendly error messages
+- Barcode scan failures fallback to manual entry
+- Database operations wrapped in try-catch with logging
+- Input validation on all user forms (non-empty checks, number parsing)
+- Graceful degradation when APIs are unavailable
+
+---
+
+## Architecture Overview
+
+### MVVM Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│                   UI Layer                       │
+│  (Composables: Screens, Dialogs, Components)    │
+│              ↓ StateFlow ↑ Events               │
+└─────────────────────────────────────────────────┘
+                          ↕
+┌─────────────────────────────────────────────────┐
+│               ViewModel Layer                    │
+│  • FoodLogViewModel                             │
+│  • NutritionDashboardViewModel                  │
+│  • MealPlanViewModel                            │
+│  • RecipeDiscoveryViewModel                     │
+│  • SessionViewModel                             │
+└─────────────────────────────────────────────────┘
+                          ↕
+┌─────────────────────────────────────────────────┐
+│               Data Layer                         │
+│  • Room Database (FoodLogDao, AppDatabase)      │
+│  • Repositories (RecipeDiscoveryRepository)     │
+│  • API Services (OpenFoodFactsService,         │
+│    MealApiService)                              │
+│  • SharedPreferences                            │
+└─────────────────────────────────────────────────┘
+```
+
+## Nutrition Calculation Details
+
+### Daily Calorie Goal
+- Set by user during onboarding (default: 2000 calories)
+- Used as basis for macro calculations
+
+### Macro Distribution (30/40/30 Split)
+The app calculates macro goals using a balanced macro split:
+
+```kotlin
+// Protein: 30% of calories from protein
+val proteinGoal = (calorieGoal * 0.30 / 4).toFloat()  // ÷4 cal/gram
+
+// Carbs: 40% of calories from carbs
+val carbsGoal = (calorieGoal * 0.40 / 4).toFloat()    // ÷4 cal/gram
+
+// Fat: 30% of calories from fat
+val fatGoal = (calorieGoal * 0.30 / 9).toFloat()      // ÷9 cal/gram
+```
+
+## Build & Run Instructions
+
+### Prerequisites
+- Android Studio Hedgehog or later
+- JDK 17
+- Android SDK API 26+ (min) and 36 (target)
+- Physical device or emulator with camera support (for barcode scanning)
+
+### Steps
 
 1. **Clone the Repository**
    ```bash
    git clone https://github.com/jonahr4/CS501-FinalProject.git
    cd CS501-FinalProject
+   ```
+
 2. **Open in Android Studio**
 * Launch Android Studio
 * Select File → Open… and choose the cloned project folder.
@@ -42,46 +149,35 @@ To build and run **MealMap** locally:
 
 The app should build successfully and launch into the onboarding screen.
 
+
 ---
-## App Concept
-MealMap is a mobile app designed to simplify weekly meal planning, recipe discovery, and nutrition tracking. The goal is to help users eat healthier by making it easier to plan meals, discover new recipes, and track food intake. Key features include barcode scanning, meal photo logging, a drag-and-drop meal planning calendar, and auto-generated shopping lists.
 
-The app will be built natively for Android using Jetpack Compose, following an MVVM architecture. We will use a Room database for offline data storage, and integrate camera and GPS sensors for barcode scanning and store detection.
+## Testing Strategy
 
-## Target Users & Problem
-MealMap is built for busy college students and young professionals who want to eat healthier but don’t have time to plan or shop properly. These users often fall into repetitive eating habits or rely on takeout due to the effort required to plan meals, find recipes, and build shopping lists.
+### Manual Testing
+- **Feature Testing**: Each screen tested for UI responsiveness and data flow
+- **Navigation Testing**: Verified all navigation paths work correctly
+- **Permission Testing**: Camera permissions tested on physical device
+- **API Testing**: Tested with valid/invalid barcodes and recipe searches
+- **Edge Cases**:
+  - Empty states (no logs, no recipes found)
+  - Invalid inputs (negative numbers, empty strings)
+  - Network failures (airplane mode testing)
 
-MealMap combines these tasks into a single streamlined experience. With built-in tracking and streak features, users can see their progress over time and stay motivated.
+### Debugging Tools Used
+- **Android Studio Logcat**: Monitoring API responses and errors
+- **Android Studio Database Inspector**: Viewing Room database contents
+- **Layout Inspector**: Debugging Compose UI hierarchy
+- **Network Profiler**: Monitoring API call performance
 
-## Features
+### Known Limitations
+- Barcode scanner may not work well in Android Emulator (requires physical device)
+- Some barcodes may not be in OpenFoodFacts database (manual entry available)
+- Macro split is fixed (30/40/30) - not yet customizable per user
 
-### MVP (Minimum Viable Product)
-- **Barcode Food Logging**: Scan barcodes to fetch nutrition data (Nutritionix/OpenFoodFacts).
-- **Recipe Discovery**: Browse recipes from TheMealDB.
-- **Meal Planning**: Weekly calendar to assign meals.
-- **Shopping List**: Automatically built from weekly meal plan.
-- **Nutrition Tracking**: Track calories and macros over time.
+---
 
-### Stretch Goals
-- Smart ingredient substitutions.
-- Receipt scanning for budget tracking.
-- Meal prep video tutorials (YouTube API).
-- Recipe sharing with friends.
-
-## APIs & Sensors
-- **APIs**: TheMealDB (recipes), Nutritionix or OpenFoodFacts (barcodes), Google Places (store search)
-- **Sensors**: 
-  - **CameraX**: Barcode scanning and photo logging
-  - **GPS**: Find nearby grocery stores and show reminders
-
-## Navigation Map
-- **Meal Plan Screen**
-- **Recipe Browser & Detail View**
-- **Camera / Barcode Scanner Screen**
-- **Nutrition Dashboard**
-- **Shopping List**
-- Uses bottom nav bar (phone) and responsive layout (tablet)
-- Built with Scaffold + LazyColumn for composable layouts
+## Team Workflow
 
 ## Team & Roles
 We are a 2-person Agile team:
@@ -89,19 +185,53 @@ We are a 2-person Agile team:
 - **Abidul Islam** – UI/UX design, theming, layout using Jetpack Compose
 - **Both** – Shared responsibility for Room DB, data models, testing, and integration
 
-We’ll follow weekly sprints, commit to a shared GitHub repo, and collaborate on blockers.
+
+
+
+
+---
+
+## Stretch Goals
+
+### ✅ Achieved
+- ~~Barcode scanning~~ - Fully implemented with ML Kit
+- ~~Smart shopping list~~ - Auto-generated with ingredient grouping
+- ~~Nutrition dashboard~~ - Real-time tracking with progress visualization
+
+### 🕓 Future Work
+- **Smart Ingredient Substitution**: Would require NLP or additional recipe API
+- **Receipt Scanning / Budget Tracking**: OCR integration is complex
+- **GPS Store Detection**: Location permissions and geofencing out of scope
+- **Recipe Sharing**: Would require backend server and user accounts
+- **Meal Prep Video Tutorials**: YouTube API integration deprioritized
+
+---
 
 ## Tech Stack
-- Kotlin + Jetpack Compose
-- MVVM architecture
-- Room database (Android Jetpack)
-- Retrofit for API calls
-- CameraX + ML Kit for barcode/photo capture
-- GPS via FusedLocationProviderClient
-- GitHub for version control
 
-## Risks & Open Questions
-- **Barcode Coverage**: Some food items may be missing; fallback to manual entry.
-- **Sensor Reliability**: GPS/geofencing can be inconsistent across devices.
-- **Nutrition Framing**: Language will be health-positive, not restrictive.
-- **Stretch Feature Time**: Time limits may affect extra features like receipt scanning or video integration.
+**Frontend:**
+- Kotlin 2.0
+- Jetpack Compose (Material 3)
+- Jetpack Navigation Compose
+- Coil (Image Loading)
+
+**Backend/Data:**
+- Room Database 2.6.1
+- SharedPreferences
+- Retrofit 2.9.0 + Moshi (JSON)
+- Kotlin Coroutines + Flow
+
+**APIs:**
+- TheMealDB API (recipe data)
+- OpenFoodFacts API (barcode nutrition data)
+
+**Sensors/Hardware:**
+- CameraX 1.3.1
+- ML Kit Barcode Scanning 17.2.0
+- Accompanist Permissions 0.32.0
+
+**Development Tools:**
+- Android Studio Hedgehog+
+- Gradle 8.13
+- Git/GitHub
+

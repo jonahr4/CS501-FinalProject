@@ -99,11 +99,10 @@ fun MealMapApp() {
                                 onClick = {
                                     if (!selected) {
                                         navController.navigate(destination.route) {
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
+                                            popUpTo(MealMapDestination.MealPlan.route) {
+                                                inclusive = false
                                             }
                                             launchSingleTop = true
-                                            restoreState = true
                                         }
                                     }
                                 },
@@ -126,6 +125,7 @@ fun MealMapApp() {
                 MealMapNavHost(
                     navController = navController,
                     mealPlanViewModel = mealPlanViewModel,
+                    onboardingProfile = sessionState.onboardingProfile,
                     modifier = Modifier.padding(innerPadding)
                 )
             }

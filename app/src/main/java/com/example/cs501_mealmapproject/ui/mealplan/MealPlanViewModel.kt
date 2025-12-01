@@ -92,9 +92,9 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         private val defaultMeals = listOf(
-            MealSlot("Breakfast", "Tap to add a recipe"),
-            MealSlot("Lunch", "Tap to add a recipe"),
-            MealSlot("Dinner", "Tap to add a recipe")
+            MealSlot("Breakfast", "No meal selected"),
+            MealSlot("Lunch", "No meal selected"),
+            MealSlot("Dinner", "No meal selected")
         )
         private const val PREF_KEY = "meal_plan_serialized_v1"
     }
