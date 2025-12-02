@@ -235,3 +235,28 @@ We are a 2-person Agile team:
 - Gradle 8.13
 - Git/GitHub
 
+# AI Usage Statement
+
+## Tools Used
+- Android Studio Gemini, Claude Code, ChatGPT
+- Used for code lookup, debugging hints, small code snippets, and test scaffolds
+
+## Helpfulness
+- Very effective for small, specific tasks
+- Speeds up debugging by explaining errors and library behavior
+- Helpful for quickly locating project files/functions
+
+## Limitations
+- Struggles with full-app context; answers become generic
+- Sometimes suggests code that breaks existing logic
+- All output required verification with tests/debugger
+
+## Misleading Example
+- Asked: “Rewrite the FoodLog flow using best practices”
+- AI generated a new architecture that didn’t match our project
+
+## Understanding & Corrections
+- We double-checked all AI suggestions
+- Used AI as a learning tool, not a final code source
+- Ensured we understood each change before applying it
+
