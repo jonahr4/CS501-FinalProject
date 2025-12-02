@@ -10,14 +10,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,17 +39,17 @@ fun MealPlanScreen(
     MealPlanContent(
         modifier = modifier,
         plan = uiState.plan,
-        onNavigateToRecipes = onNavigateToRecipes
+        onNavigateToRecipes = onNavigateToRecipes,
+        onRemoveMeal = { date, mealType -> mealPlanViewModel.removeMeal(date, mealType) }
     )
 }
 
-// Composable function for Plan Screen. Currently using placeholder info
-// TODO: Implement Planning functionality
 @Composable
 private fun MealPlanContent(
     modifier: Modifier = Modifier,
     plan: List<DailyMealPlan>,
-    onNavigateToRecipes: () -> Unit = {}
+    onNavigateToRecipes: () -> Unit = {},
+    onRemoveMeal: (LocalDate, String) -> Unit = { _, _ -> }
 ) {
     
     Column(
@@ -81,27 +86,47 @@ private fun MealPlanContent(
                             style = MaterialTheme.typography.titleMedium
                         )
                         dailyPlan.meals.forEach { mealSlot ->
+                            val isPlaceholder = mealSlot.recipeName == "Tap to add a recipe"
+                            
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        // Make the whole row clickable. 
+                                        // Ideally, we would pass the date/mealType to know WHERE to add the recipe.
+                                        // For now, we navigate to recipes.
+                                        onNavigateToRecipes() 
+                                    }
+                                    .padding(vertical = 4.dp), // Add some padding for touch target
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = mealSlot.mealType,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                                Text(
-                                    text = mealSlot.recipeName,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = mealSlot.mealType,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                    Text(
+                                        text = mealSlot.recipeName,
+                                        style = if (isPlaceholder) 
+                                            MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary)
+                                        else 
+                                            MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                                
+                                // Show delete button only if a meal is actually selected
+                                if (!isPlaceholder) {
+                                    IconButton(onClick = { onRemoveMeal(dailyPlan.date, mealSlot.mealType) }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Remove meal",
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
                             }
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Tap here to add recipes",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { onNavigateToRecipes() }
-                        )
                     }
                 }
             }
@@ -127,9 +152,9 @@ private fun previewWeekPlan(): List<DailyMealPlan> {
         DailyMealPlan(
             date = date,
             meals = listOf(
-                MealSlot("Breakfast", "Greek yogurt parfait"),
+                MealSlot("Breakfast", "Tap to add a recipe"),
                 MealSlot("Lunch", "Quinoa bowl"),
-                MealSlot("Dinner", "Oven roasted salmon")
+                MealSlot("Dinner", "Tap to add a recipe")
             )
         )
     }

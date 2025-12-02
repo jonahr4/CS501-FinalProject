@@ -16,9 +16,9 @@ data class MealDto(
     @Json(name = "strMeal") val strMeal: String? = null,
     @Json(name = "strCategory") val strCategory: String? = null,
     @Json(name = "strArea") val strArea: String? = null,
-        @Json(name = "strTags") val strTags: String? = null,
+    @Json(name = "strTags") val strTags: String? = null,
     @Json(name = "strInstructions") val strInstructions: String? = null,
-        @Json(name = "strSource") val strSource: String? = null,
+    @Json(name = "strSource") val strSource: String? = null,
     @Json(name = "strMealThumb") val strMealThumb: String? = null,
     @Json(name = "strIngredient1") val strIngredient1: String? = null,
     @Json(name = "strIngredient2") val strIngredient2: String? = null,
@@ -63,8 +63,21 @@ data class MealDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class IngredientDto(
+    @Json(name = "idIngredient") val idIngredient: String,
+    @Json(name = "strIngredient") val strIngredient: String,
+    @Json(name = "strDescription") val strDescription: String? = null,
+    @Json(name = "strType") val strType: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class MealListResponse(
     @Json(name = "meals") val meals: List<MealDto>?
+)
+
+@JsonClass(generateAdapter = true)
+data class IngredientListResponse(
+    @Json(name = "meals") val ingredients: List<IngredientDto>?
 )
 
 interface MealApiService {
@@ -73,6 +86,9 @@ interface MealApiService {
 
     @GET("lookup.php")
     suspend fun getMealById(@Query("i") id: String): MealListResponse
+
+    @GET("list.php?i=list")
+    suspend fun getAllIngredients(): IngredientListResponse
 }
 
 object MealApi {
