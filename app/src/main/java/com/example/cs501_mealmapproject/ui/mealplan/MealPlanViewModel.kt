@@ -36,6 +36,10 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
         savePlanToPrefs()
     }
 
+    fun removeMeal(date: LocalDate, mealType: String) {
+        assignMeal(date, mealType, "Tap to add a recipe")
+    }
+
     private fun savePlanToPrefs() {
         try {
             val lines = _uiState.value.plan.flatMap { day ->
@@ -92,9 +96,9 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         private val defaultMeals = listOf(
-            MealSlot("Breakfast", "No meal selected"),
-            MealSlot("Lunch", "No meal selected"),
-            MealSlot("Dinner", "No meal selected")
+            MealSlot("Breakfast", "Tap to add a recipe"),
+            MealSlot("Lunch", "Tap to add a recipe"),
+            MealSlot("Dinner", "Tap to add a recipe")
         )
         private const val PREF_KEY = "meal_plan_serialized_v1"
     }

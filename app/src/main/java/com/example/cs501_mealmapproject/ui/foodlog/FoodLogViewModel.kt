@@ -44,6 +44,12 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun deleteLog(id: Long) {
+        viewModelScope.launch {
+            foodLogDao.deleteFoodLog(id)
+        }
+    }
+
     fun addManualLog(
         mealName: String,
         calories: Int,

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -108,19 +109,19 @@ fun FoodLogScreen(
             modifier = modifier,
             recentLogs = uiState.recentLogs,
             onScanBarcode = { showScanner = true },
-            onAddLog = { showManualEntryDialog = true }
+            onAddLog = { showManualEntryDialog = true },
+            onDeleteLog = { id -> foodLogViewModel.deleteLog(id) }
         )
     }
 }
 
-// Composable function for foodLogging. Currently using placeholder info
-// TODO: Implement Food Logging Functionality
 @Composable
 private fun FoodLogContent(
     modifier: Modifier = Modifier,
     recentLogs: List<FoodLogEntry>,
     onScanBarcode: () -> Unit = {},
-    onAddLog: () -> Unit = {}
+    onAddLog: () -> Unit = {},
+    onDeleteLog: (Long) -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -182,26 +183,42 @@ private fun FoodLogContent(
                     )
                 } else {
                     recentLogs.forEach { entry ->
-                        Column(
+                        // Wrap content in a Row to add the delete button
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = entry.meal,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "${entry.calories} cal | P: ${entry.protein}g | C: ${entry.carbs}g | F: ${entry.fat}g",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = entry.source,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = entry.meal,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = "${entry.calories} cal | P: ${entry.protein}g | C: ${entry.carbs}g | F: ${entry.fat}g",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = entry.source,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            
+                            // Delete Button
+                            IconButton(onClick = { onDeleteLog(entry.id) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete log",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
                 }
@@ -234,7 +251,8 @@ private fun FoodLogScreenPreview() {
                 )
             ),
             onScanBarcode = {},
-            onAddLog = {}
+            onAddLog = {},
+            onDeleteLog = {}
         )
     }
 }
