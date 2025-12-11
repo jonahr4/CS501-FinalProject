@@ -57,9 +57,7 @@ fun MealMapApp() {
         sessionState.user == null -> {
             SignInScreen(
                 modifier = Modifier.fillMaxSize(),
-                onSignInClick = {
-                    sessionViewModel.signInDemoUser()
-                }
+                sessionViewModel = sessionViewModel
             )
         }
 

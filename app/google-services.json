@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "755066491175",
+    "project_id": "mealmap-2a513",
+    "storage_bucket": "mealmap-2a513.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:755066491175:android:28dd92a79705cc7b485902",
+        "android_client_info": {
+          "package_name": "com.example.cs501_mealmapproject"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "755066491175-v33ovhdt868r1idf50t7kpab00i7cvge.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfBunsdfA0BQU_2V36mkBk8rImPv3vRx8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "755066491175-v33ovhdt868r1idf50t7kpab00i7cvge.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
