@@ -6,6 +6,8 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cs501_mealmapproject.data.auth.AuthRepository
+import com.example.cs501_mealmapproject.data.database.AppDatabase
+import com.example.cs501_mealmapproject.data.repository.UserRepository
 import com.example.cs501_mealmapproject.ui.model.AppUser
 import com.example.cs501_mealmapproject.ui.onboarding.OnboardingProfile
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -19,6 +21,8 @@ import kotlinx.coroutines.launch
 class SessionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val authRepository = AuthRepository(application)
+    private val userRepository = UserRepository()
+    private val database = AppDatabase.getDatabase(application)
 
     private val _uiState = MutableStateFlow(SessionState())
     val uiState: StateFlow<SessionState> = _uiState.asStateFlow()
@@ -28,17 +32,28 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             authRepository.observeAuthState().collect { firebaseUser ->
                 if (firebaseUser != null) {
+                    val appUser = AppUser(
+                        id = firebaseUser.uid,
+                        displayName = firebaseUser.displayName ?: "User",
+                        email = firebaseUser.email,
+                        photoUrl = firebaseUser.photoUrl?.toString()
+                    )
+
+                    // Save user profile to Firestore
+                    userRepository.saveUserProfile(appUser)
+
+                    // Load onboarding profile from Firestore
+                    val onboardingProfile = userRepository.getOnboardingProfile(firebaseUser.uid)
+
                     _uiState.update {
                         it.copy(
-                            user = AppUser(
-                                id = firebaseUser.uid,
-                                displayName = firebaseUser.displayName ?: "User",
-                                email = firebaseUser.email,
-                                photoUrl = firebaseUser.photoUrl?.toString()
-                            ),
-                            onboardingComplete = it.onboardingProfile != null
+                            user = appUser,
+                            onboardingProfile = onboardingProfile,
+                            onboardingComplete = onboardingProfile != null
                         )
                     }
+
+                    Log.d("SessionViewModel", "User profile loaded. Onboarding complete: ${onboardingProfile != null}")
                 } else {
                     _uiState.update { SessionState() }
                 }
@@ -76,8 +91,17 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun completeOnboarding(profile: OnboardingProfile) {
-        _uiState.update {
-            it.copy(onboardingProfile = profile, onboardingComplete = true)
+        viewModelScope.launch {
+            val userId = _uiState.value.user?.id
+            if (userId != null) {
+                // Save onboarding profile to Firestore
+                userRepository.saveOnboardingProfile(userId, profile)
+                Log.d("SessionViewModel", "Onboarding profile saved to Firestore")
+            }
+
+            _uiState.update {
+                it.copy(onboardingProfile = profile, onboardingComplete = true)
+            }
         }
     }
 
@@ -88,6 +112,11 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun signOut() {
+        viewModelScope.launch {
+            // Clear all local Room data to prevent data leakage between accounts
+            database.clearAllData()
+            Log.d("SessionViewModel", "Local database cleared on logout")
+        }
         authRepository.signOut()
         _uiState.value = SessionState()
     }

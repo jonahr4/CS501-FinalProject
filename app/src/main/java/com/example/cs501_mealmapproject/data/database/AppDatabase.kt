@@ -6,13 +6,22 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [FoodLogEntity::class],
-    version = 1,
+    entities = [FoodLogEntity::class, MealPlanEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun foodLogDao(): FoodLogDao
+    abstract fun mealPlanDao(): MealPlanDao
+
+    /**
+     * Clear all local data - called on logout to prevent data leakage between accounts
+     */
+    suspend fun clearAllData() {
+        foodLogDao().deleteAllFoodLogs()
+        mealPlanDao().deleteAllMealPlans()
+    }
 
     companion object {
         @Volatile
@@ -24,7 +33,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "mealmap_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration() // Simple migration for course project
+                    .build()
                 INSTANCE = instance
                 instance
             }
