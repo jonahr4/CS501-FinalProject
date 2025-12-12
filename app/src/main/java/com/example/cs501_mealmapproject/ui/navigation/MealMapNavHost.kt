@@ -29,7 +29,8 @@ fun MealMapNavHost(
         composable(MealMapDestination.MealPlan.route) {
             MealPlanScreen(
                 mealPlanViewModel = mealPlanViewModel,
-                onNavigateToRecipes = {
+                onNavigateToRecipes = { date, mealType ->
+                    mealPlanViewModel.setPreSelectedSlot(date, mealType)
                     navController.navigate(MealMapDestination.Recipes.route) {
                         launchSingleTop = true
                     }

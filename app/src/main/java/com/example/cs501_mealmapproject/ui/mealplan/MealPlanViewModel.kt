@@ -40,6 +40,14 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
         assignMeal(date, mealType, "Tap to add a recipe")
     }
 
+    fun setPreSelectedSlot(date: LocalDate, mealType: String) {
+        _uiState.update { it.copy(preSelectedDate = date, preSelectedMealType = mealType) }
+    }
+
+    fun clearPreSelectedSlot() {
+        _uiState.update { it.copy(preSelectedDate = null, preSelectedMealType = null) }
+    }
+
     private fun savePlanToPrefs() {
         try {
             val lines = _uiState.value.plan.flatMap { day ->
@@ -105,7 +113,9 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
 }
 
 data class MealPlanUiState(
-    val plan: List<DailyMealPlan> = emptyList()
+    val plan: List<DailyMealPlan> = emptyList(),
+    val preSelectedDate: LocalDate? = null,
+    val preSelectedMealType: String? = null
 )
 
 data class DailyMealPlan(
