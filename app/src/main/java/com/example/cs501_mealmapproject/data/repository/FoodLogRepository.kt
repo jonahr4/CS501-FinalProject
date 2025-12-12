@@ -57,15 +57,16 @@ class FoodLogRepository(context: Context) {
      */
     suspend fun insertFoodLog(userId: String, foodLog: FoodLogEntity): Result<Unit> {
         return try {
-            // 1. Write to Room immediately
-            foodLogDao.insertFoodLog(foodLog)
-            Log.d(TAG, "Food log inserted to Room: ${foodLog.mealName}")
+            // 1. Write to Room immediately and capture the generated ID
+            val generatedId = foodLogDao.insertFoodLog(foodLog)
+            Log.d(TAG, "Food log inserted to Room with ID $generatedId: ${foodLog.mealName}")
 
-            // 2. Sync to Firestore in background
+            // 2. Sync to Firestore in background with the correct ID
             withContext(Dispatchers.IO) {
                 try {
-                    // Get the ID after insertion (Room auto-generates it)
-                    val firestoreLog = foodLog.toFirestore()
+                    // Use the generated ID from Room
+                    val foodLogWithId = foodLog.copy(id = generatedId)
+                    val firestoreLog = foodLogWithId.toFirestore()
 
                     firestore.collection(COLLECTION_USERS)
                         .document(userId)
@@ -74,7 +75,7 @@ class FoodLogRepository(context: Context) {
                         .set(firestoreLog)
                         .await()
 
-                    Log.d(TAG, "Food log synced to Firestore: ${foodLog.mealName}")
+                    Log.d(TAG, "Food log synced to Firestore with ID ${firestoreLog.id}: ${foodLog.mealName}")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to sync food log to Firestore", e)
                     // Room data is still saved, will retry on next sync
@@ -147,10 +148,11 @@ class FoodLogRepository(context: Context) {
 
             Log.d(TAG, "Found ${firestoreLogs.size} food logs in Firestore")
 
-            // Insert/update in Room
+            // Insert/update in Room (using REPLACE strategy to avoid duplicates)
             firestoreLogs.forEach { firestoreLog ->
                 val entity = firestoreLog.toEntity()
-                foodLogDao.insertFoodLog(entity)
+                val insertedId = foodLogDao.insertFoodLog(entity)
+                Log.d(TAG, "Synced food log ID ${entity.id} (Room ID: $insertedId)")
             }
 
             Log.d(TAG, "Sync completed: ${firestoreLogs.size} food logs synced")

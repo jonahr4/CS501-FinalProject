@@ -23,7 +23,6 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         loadFoodLogs()
-        syncFromFirestore()
     }
 
     private fun loadFoodLogs() {
@@ -42,16 +41,6 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                     )
                 }
                 _uiState.value = FoodLogUiState(recentLogs = entries)
-            }
-        }
-    }
-
-    private fun syncFromFirestore() {
-        viewModelScope.launch {
-            val userId = authRepository.currentUser?.uid
-            if (userId != null) {
-                foodLogRepository.syncFromFirestore(userId)
-                Log.d("FoodLogViewModel", "Synced food logs from Firestore")
             }
         }
     }
