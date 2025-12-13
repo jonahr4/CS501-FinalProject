@@ -89,9 +89,9 @@ fun FoodLogFirestore.toEntity(): FoodLogEntity {
 
 // ========== MealPlanEntity <-> MealPlanFirestore ==========
 
-fun MealPlanEntity.toFirestore(): MealPlanFirestore {
+fun MealPlanEntity.toFirestore(planId: String = "${this.date}_${this.mealType}"): MealPlanFirestore {
     return MealPlanFirestore(
-        id = this.id.toString(),
+        id = planId,
         date = this.date,
         mealType = this.mealType,
         recipeName = this.recipeName,

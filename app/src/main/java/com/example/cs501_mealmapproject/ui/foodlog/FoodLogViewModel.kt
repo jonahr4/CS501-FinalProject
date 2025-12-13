@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cs501_mealmapproject.data.auth.AuthRepository
+import com.example.cs501_mealmapproject.data.database.AppDatabase
 import com.example.cs501_mealmapproject.data.database.FoodLogEntity
 import com.example.cs501_mealmapproject.data.database.RecipeCacheEntity
 import com.example.cs501_mealmapproject.data.database.IngredientWithMeasure

@@ -32,6 +32,8 @@ class MealPlanRepository(context: Context) {
         const val TAG = "MealPlanRepository"
     }
 
+    private fun planId(date: String, mealType: String) = "${date}_$mealType"
+
     // ========== Read Operations (from Room) ==========
 
     /**
@@ -65,12 +67,13 @@ class MealPlanRepository(context: Context) {
             withContext(Dispatchers.IO) {
                 try {
                     mealPlans.forEach { plan ->
-                        val firestorePlan = plan.toFirestore()
+                        val planDocId = planId(plan.date, plan.mealType)
+                        val firestorePlan = plan.toFirestore(planDocId)
 
                         firestore.collection(COLLECTION_USERS)
                             .document(userId)
                             .collection(COLLECTION_MEAL_PLANS)
-                            .document(firestorePlan.id)
+                            .document(planDocId)
                             .set(firestorePlan)
                             .await()
                     }
@@ -99,12 +102,13 @@ class MealPlanRepository(context: Context) {
             // 2. Sync to Firestore
             withContext(Dispatchers.IO) {
                 try {
-                    val firestorePlan = mealPlan.toFirestore()
+                    val planDocId = planId(mealPlan.date, mealPlan.mealType)
+                    val firestorePlan = mealPlan.toFirestore(planDocId)
 
                     firestore.collection(COLLECTION_USERS)
                         .document(userId)
                         .collection(COLLECTION_MEAL_PLANS)
-                        .document(firestorePlan.id)
+                        .document(planDocId)
                         .set(firestorePlan)
                         .await()
 
@@ -133,24 +137,20 @@ class MealPlanRepository(context: Context) {
             // 2. Mark as deleted in Firestore
             withContext(Dispatchers.IO) {
                 try {
-                    // Find the document with matching date and mealType
-                    val plans = firestore.collection(COLLECTION_USERS)
+                    val planDocId = planId(date, mealType)
+                    firestore.collection(COLLECTION_USERS)
                         .document(userId)
                         .collection(COLLECTION_MEAL_PLANS)
-                        .whereEqualTo("date", date)
-                        .whereEqualTo("mealType", mealType)
-                        .whereEqualTo("deleted", false)
-                        .get()
-                        .await()
-
-                    plans.documents.forEach { doc ->
-                        doc.reference.update(
+                        .document(planDocId)
+                        .set(
                             mapOf(
+                                "id" to planDocId,
                                 "deleted" to true,
                                 "lastUpdatedAt" to System.currentTimeMillis()
-                            )
-                        ).await()
-                    }
+                            ),
+                            com.google.firebase.firestore.SetOptions.merge()
+                        )
+                        .await()
 
                     Log.d(TAG, "Meal plan soft deleted in Firestore")
                 } catch (e: Exception) {
