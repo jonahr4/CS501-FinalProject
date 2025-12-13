@@ -2,6 +2,7 @@ package com.example.cs501_mealmapproject.ui.mealplan
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import android.util.Log
 import java.time.LocalDate
@@ -13,10 +14,29 @@ import kotlinx.coroutines.flow.update
 
 class MealPlanViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val prefs = application.getSharedPreferences("meal_plan_prefs", Context.MODE_PRIVATE)
+    private val appContext = application.applicationContext
+    private var currentUserId: String? = null
+    private var prefs: SharedPreferences = application.getSharedPreferences("meal_plan_prefs", Context.MODE_PRIVATE)
 
-    private val _uiState = MutableStateFlow(MealPlanUiState(plan = loadSavedPlan() ?: generateWeekPlan()))
+    private val _uiState = MutableStateFlow(MealPlanUiState(plan = generateWeekPlan()))
     val uiState: StateFlow<MealPlanUiState> = _uiState.asStateFlow()
+
+    /**
+     * Set the current user and load their meal plan data.
+     * Call this when user signs in or when the ViewModel is first created with a signed-in user.
+     */
+    fun setCurrentUser(userId: String) {
+        if (currentUserId == userId) return // Already set for this user
+        
+        currentUserId = userId
+        // Use user-specific SharedPreferences
+        prefs = appContext.getSharedPreferences("meal_plan_prefs_$userId", Context.MODE_PRIVATE)
+        
+        // Load this user's meal plan
+        val savedPlan = loadSavedPlan()
+        _uiState.value = MealPlanUiState(plan = savedPlan ?: generateWeekPlan())
+        Log.d("MealPlanVM", "Loaded meal plan for user: $userId")
+    }
 
     fun assignMeal(date: LocalDate, mealType: String, recipeName: String) {
         _uiState.update { state ->
@@ -106,7 +126,8 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
         private val defaultMeals = listOf(
             MealSlot("Breakfast", "Tap to add a recipe"),
             MealSlot("Lunch", "Tap to add a recipe"),
-            MealSlot("Dinner", "Tap to add a recipe")
+            MealSlot("Dinner", "Tap to add a recipe"),
+            MealSlot("Snack", "Tap to add a recipe")
         )
         private const val PREF_KEY = "meal_plan_serialized_v1"
     }

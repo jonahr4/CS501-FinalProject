@@ -1,12 +1,14 @@
 package com.example.cs501_mealmapproject.ui
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cs501_mealmapproject.data.auth.AuthRepository
 import com.example.cs501_mealmapproject.ui.model.AppUser
+import com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel
 import com.example.cs501_mealmapproject.ui.onboarding.OnboardingProfile
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
@@ -19,6 +21,7 @@ import kotlinx.coroutines.launch
 class SessionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val authRepository = AuthRepository(application)
+    private val appContext = application.applicationContext
 
     private val _uiState = MutableStateFlow(SessionState())
     val uiState: StateFlow<SessionState> = _uiState.asStateFlow()
@@ -28,6 +31,9 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             authRepository.observeAuthState().collect { firebaseUser ->
                 if (firebaseUser != null) {
+                    // Load saved onboarding profile for this user
+                    val savedProfile = loadOnboardingProfile(firebaseUser.uid)
+                    
                     _uiState.update {
                         it.copy(
                             user = AppUser(
@@ -36,9 +42,11 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
                                 email = firebaseUser.email,
                                 photoUrl = firebaseUser.photoUrl?.toString()
                             ),
-                            onboardingComplete = it.onboardingProfile != null
+                            onboardingProfile = savedProfile,
+                            onboardingComplete = savedProfile != null
                         )
                     }
+                    Log.d("SessionViewModel", "User signed in: ${firebaseUser.email}, has profile: ${savedProfile != null}")
                 } else {
                     _uiState.update { SessionState() }
                 }
@@ -76,20 +84,91 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun completeOnboarding(profile: OnboardingProfile) {
+        val userId = _uiState.value.user?.id
+        if (userId != null) {
+            saveOnboardingProfile(userId, profile)
+        }
         _uiState.update {
             it.copy(onboardingProfile = profile, onboardingComplete = true)
         }
     }
 
     fun resetOnboarding() {
+        val userId = _uiState.value.user?.id
+        if (userId != null) {
+            // Clear saved profile for this user
+            clearOnboardingProfile(userId)
+        }
         _uiState.update {
             it.copy(onboardingComplete = false)
         }
     }
 
     fun signOut() {
+        // Sign out from Firebase and Google
         authRepository.signOut()
+        
+        // Reset session state - user-specific data is stored with userId key,
+        // so each user's data remains separate
         _uiState.value = SessionState()
+    }
+    
+    /**
+     * Save onboarding profile for a specific user
+     */
+    private fun saveOnboardingProfile(userId: String, profile: OnboardingProfile) {
+        try {
+            val prefs = appContext.getSharedPreferences("onboarding_prefs_$userId", Context.MODE_PRIVATE)
+            prefs.edit()
+                .putInt("calorieTarget", profile.calorieTarget)
+                .putFloat("currentWeightLbs", profile.currentWeightLbs)
+                .putFloat("goalWeightLbs", profile.goalWeightLbs)
+                .putString("activityLevel", profile.activityLevel.name)
+                .putBoolean("hasProfile", true)
+                .apply()
+            Log.d("SessionViewModel", "Saved onboarding profile for user: $userId")
+        } catch (e: Exception) {
+            Log.e("SessionViewModel", "Failed to save onboarding profile", e)
+        }
+    }
+    
+    /**
+     * Load onboarding profile for a specific user
+     */
+    private fun loadOnboardingProfile(userId: String): OnboardingProfile? {
+        return try {
+            val prefs = appContext.getSharedPreferences("onboarding_prefs_$userId", Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("hasProfile", false)) {
+                return null
+            }
+            
+            OnboardingProfile(
+                calorieTarget = prefs.getInt("calorieTarget", 2000),
+                currentWeightLbs = prefs.getFloat("currentWeightLbs", 150f),
+                goalWeightLbs = prefs.getFloat("goalWeightLbs", 150f),
+                activityLevel = try {
+                    ActivityLevel.valueOf(prefs.getString("activityLevel", "Moderate") ?: "Moderate")
+                } catch (e: Exception) {
+                    ActivityLevel.Moderate
+                }
+            )
+        } catch (e: Exception) {
+            Log.e("SessionViewModel", "Failed to load onboarding profile", e)
+            null
+        }
+    }
+    
+    /**
+     * Clear onboarding profile for a specific user (used when resetting goals)
+     */
+    private fun clearOnboardingProfile(userId: String) {
+        try {
+            val prefs = appContext.getSharedPreferences("onboarding_prefs_$userId", Context.MODE_PRIVATE)
+            prefs.edit().clear().apply()
+            Log.d("SessionViewModel", "Cleared onboarding profile for user: $userId")
+        } catch (e: Exception) {
+            Log.e("SessionViewModel", "Failed to clear onboarding profile", e)
+        }
     }
 }
 

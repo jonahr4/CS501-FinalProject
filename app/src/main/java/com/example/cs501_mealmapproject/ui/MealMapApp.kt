@@ -3,6 +3,7 @@ package com.example.cs501_mealmapproject.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +25,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,13 +65,70 @@ fun MealMapApp() {
         }
 
         !sessionState.onboardingComplete -> {
-            OnboardingScreen(
-                modifier = Modifier.fillMaxSize(),
-                initialProfile = sessionState.onboardingProfile,
-                onSubmit = { profile ->
-                    sessionViewModel.completeOnboarding(profile)
+            // Onboarding screen with sign-out option
+            var showOnboardingMenu by remember { mutableStateOf(false) }
+            
+            Scaffold(
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = { Text("Set Your Goals") },
+                        actions = {
+                            Box {
+                                IconButton(onClick = { showOnboardingMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AccountCircle,
+                                        contentDescription = "Profile",
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showOnboardingMenu,
+                                    onDismissRequest = { showOnboardingMenu = false }
+                                ) {
+                                    // Show user info
+                                    sessionState.user?.let { user ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Column {
+                                                    Text(
+                                                        text = user.displayName,
+                                                        style = MaterialTheme.typography.titleSmall
+                                                    )
+                                                    Text(
+                                                        text = user.email ?: "",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            },
+                                            onClick = { },
+                                            enabled = false
+                                        )
+                                        HorizontalDivider()
+                                    }
+                                    DropdownMenuItem(
+                                        text = { Text("Sign Out") },
+                                        onClick = {
+                                            showOnboardingMenu = false
+                                            sessionViewModel.signOut()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    )
                 }
-            )
+            ) { innerPadding ->
+                OnboardingScreen(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    initialProfile = sessionState.onboardingProfile,
+                    onSubmit = { profile ->
+                        sessionViewModel.completeOnboarding(profile)
+                    }
+                )
+            }
         }
 
         else -> {
@@ -78,6 +138,14 @@ fun MealMapApp() {
             val currentRoute = backStackEntry?.destination?.route
             val activeDestination = destinations.firstOrNull { it.route == currentRoute }
             val mealPlanViewModel: MealPlanViewModel = viewModel()
+            
+            // Set the current user on the ViewModel to load user-specific data
+            val currentUserId = sessionState.user?.id
+            if (currentUserId != null) {
+                LaunchedEffect(currentUserId) {
+                    mealPlanViewModel.setCurrentUser(currentUserId)
+                }
+            }
 
             Scaffold(
                 topBar = {
@@ -98,6 +166,27 @@ fun MealMapApp() {
                                     expanded = showProfileMenu,
                                     onDismissRequest = { showProfileMenu = false }
                                 ) {
+                                    // Show user info at the top of the menu
+                                    sessionState.user?.let { user ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Column {
+                                                    Text(
+                                                        text = user.displayName,
+                                                        style = MaterialTheme.typography.titleSmall
+                                                    )
+                                                    Text(
+                                                        text = user.email ?: "",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            },
+                                            onClick = { /* No action, just display */ },
+                                            enabled = false
+                                        )
+                                        HorizontalDivider()
+                                    }
                                     DropdownMenuItem(
                                         text = { Text("Reset Goals") },
                                         onClick = {
@@ -156,6 +245,7 @@ fun MealMapApp() {
                     navController = navController,
                     mealPlanViewModel = mealPlanViewModel,
                     onboardingProfile = sessionState.onboardingProfile,
+                    currentUserId = currentUserId,
                     modifier = Modifier.padding(innerPadding)
                 )
             }

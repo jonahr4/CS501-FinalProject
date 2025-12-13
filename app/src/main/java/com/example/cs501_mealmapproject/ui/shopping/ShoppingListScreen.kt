@@ -47,11 +47,16 @@ import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 @Composable
 fun ShoppingListScreen(
     modifier: Modifier = Modifier,
+    currentUserId: String? = null,
     viewModel: ShoppingListViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
-    LaunchedEffect(Unit) {
+    // Set the current user on the ViewModel when it changes
+    LaunchedEffect(currentUserId) {
+        if (currentUserId != null) {
+            viewModel.setCurrentUser(currentUserId)
+        }
         viewModel.generateShoppingListFromMealPlan()
     }
     

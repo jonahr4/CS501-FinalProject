@@ -2,6 +2,7 @@ package com.example.cs501_mealmapproject.ui.shopping
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cs501_mealmapproject.network.MealApi
@@ -17,8 +18,10 @@ import java.time.LocalDate
 
 class ShoppingListViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val prefs = application.getSharedPreferences("meal_plan_prefs", Context.MODE_PRIVATE)
-    private val shoppingPrefs = application.getSharedPreferences("shopping_list_prefs", Context.MODE_PRIVATE)
+    private val appContext = application.applicationContext
+    private var currentUserId: String? = null
+    private var prefs: SharedPreferences = application.getSharedPreferences("meal_plan_prefs", Context.MODE_PRIVATE)
+    private var shoppingPrefs: SharedPreferences = application.getSharedPreferences("shopping_list_prefs", Context.MODE_PRIVATE)
 
     private val _uiState = MutableStateFlow(ShoppingListUiState())
     val uiState: StateFlow<ShoppingListUiState> = _uiState.asStateFlow()
@@ -26,9 +29,21 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
     // Cache for ingredient categories from API
     private var ingredientCategoryCache: Map<String, String> = emptyMap()
 
-    init {
-        // Load saved shopping list state on initialization
+    /**
+     * Set the current user and load their shopping list data.
+     * Call this when user signs in or when the ViewModel is first created with a signed-in user.
+     */
+    fun setCurrentUser(userId: String) {
+        if (currentUserId == userId) return // Already set for this user
+        
+        currentUserId = userId
+        // Use user-specific SharedPreferences
+        prefs = appContext.getSharedPreferences("meal_plan_prefs_$userId", Context.MODE_PRIVATE)
+        shoppingPrefs = appContext.getSharedPreferences("shopping_list_prefs_$userId", Context.MODE_PRIVATE)
+        
+        // Load this user's shopping list state
         loadShoppingListState()
+        Log.d("ShoppingListVM", "Loaded shopping list for user: $userId")
     }
 
     fun toggleItem(sectionIndex: Int, itemIndex: Int, checked: Boolean) {
@@ -508,7 +523,8 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
         }
 
         // Helper to format display text based on whether this specific recipe has duplicates
-        // hasDuplicates means the SAME recipe appears multiple times (e.g., Chicken Handi on Dec 11 and Dec 13)
+        // hasDuplicates means the SAME recipe appears multiple times on DIFFERENT days/slots
+        // (e.g., Chicken Handi on Dec 11 Lunch AND Dec 13 Dinner)
         fun formatDisplayText(info: IngredientInfo, showDateSlot: Boolean): String {
             return if (showDateSlot) {
                 // Show date/slot to distinguish same recipe on different days: "1 kg Chicken (Chicken Handi - Dec 11 Lunch)"
@@ -524,11 +540,14 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
             }
         }
 
-        // Build item list with instanceId preserved - only show date/slot when SAME recipe appears multiple times
+        // Build item list with instanceId preserved - only show date/slot when SAME recipe appears on MULTIPLE different days/slots
         fun buildItemList(map: Map<String, MutableList<IngredientInfo>>): List<ShoppingItem> {
             return map.flatMap { (base, items) ->
-                // Count occurrences of each recipe name - only show date/slot if same recipe appears twice
-                val recipeCount = items.groupBy { it.recipeName }.mapValues { it.value.size }
+                // Count UNIQUE instanceIds per recipe name - only show date/slot if same recipe has multiple different instances
+                // e.g., "Chicken Congee" with 2 ginger ingredients from the SAME instance should NOT show dates
+                // but "Chicken Congee" on Dec 11 AND Dec 13 (different instanceIds) SHOULD show dates
+                val recipeInstanceCount = items.groupBy { it.recipeName }
+                    .mapValues { entry -> entry.value.map { it.instanceId }.distinct().size }
                 
                 if (items.size == 1) {
                     val displayText = formatDisplayText(items[0], false)
@@ -536,8 +555,8 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
                 } else {
                     listOf(ShoppingItem("$base:", false, isHeader = true)) + 
                     items.map { info ->
-                        // Only show date/slot if this specific recipe appears more than once
-                        val showDateSlot = (recipeCount[info.recipeName] ?: 0) > 1
+                        // Only show date/slot if this recipe has more than one UNIQUE instance
+                        val showDateSlot = (recipeInstanceCount[info.recipeName] ?: 0) > 1
                         val displayText = formatDisplayText(info, showDateSlot)
                         ShoppingItem("  • $displayText", false, isHeader = false, instanceId = info.instanceId) 
                     }
@@ -547,8 +566,9 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
         
         fun buildDairyList(map: Map<String, MutableList<IngredientInfo>>): List<ShoppingItem> {
             return map.flatMap { (base, items) ->
-                // Count occurrences of each recipe name - only show date/slot if same recipe appears twice
-                val recipeCount = items.groupBy { it.recipeName }.mapValues { it.value.size }
+                // Count UNIQUE instanceIds per recipe name - only show date/slot if same recipe has multiple different instances
+                val recipeInstanceCount = items.groupBy { it.recipeName }
+                    .mapValues { entry -> entry.value.map { it.instanceId }.distinct().size }
                 
                 if (items.size == 1) {
                     val displayText = formatDisplayText(items[0], false)
@@ -556,8 +576,8 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
                 } else {
                     listOf(ShoppingItem("$base: (buy one container)", false, isHeader = true)) + 
                     items.map { info ->
-                        // Only show date/slot if this specific recipe appears more than once
-                        val showDateSlot = (recipeCount[info.recipeName] ?: 0) > 1
+                        // Only show date/slot if this recipe has more than one UNIQUE instance
+                        val showDateSlot = (recipeInstanceCount[info.recipeName] ?: 0) > 1
                         val displayText = formatDisplayText(info, showDateSlot)
                         ShoppingItem("  • $displayText", false, isHeader = false, instanceId = info.instanceId) 
                     }

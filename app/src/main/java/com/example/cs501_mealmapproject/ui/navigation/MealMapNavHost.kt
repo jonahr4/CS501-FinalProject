@@ -19,6 +19,7 @@ fun MealMapNavHost(
     navController: NavHostController,
     mealPlanViewModel: MealPlanViewModel,
     onboardingProfile: OnboardingProfile?,
+    currentUserId: String?,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -50,7 +51,7 @@ fun MealMapNavHost(
             NutritionDashboardScreen(onboardingProfile = onboardingProfile)
         }
         composable(MealMapDestination.Shopping.route) {
-            ShoppingListScreen()
+            ShoppingListScreen(currentUserId = currentUserId)
         }
     }
 }

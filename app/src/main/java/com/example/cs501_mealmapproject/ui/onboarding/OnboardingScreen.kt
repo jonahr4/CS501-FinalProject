@@ -8,13 +8,24 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions // Correct import for KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,12 +39,13 @@ import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
 // This function is composable for oboarding
 // TODO: Implement onboarding so Values inputted get saved to user
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
     modifier: Modifier = Modifier,
     initialProfile: OnboardingProfile? = null,
-    onSubmit: (OnboardingProfile) -> Unit = {}
+    onSubmit: (OnboardingProfile) -> Unit = {},
+    onSignOut: () -> Unit = {}
 ) {
     val defaults = initialProfile ?: OnboardingProfile(
         calorieTarget = 2000,
@@ -52,13 +64,40 @@ fun OnboardingScreen(
     var activityLevel by rememberSaveable(initialProfile) { mutableStateOf(defaults.activityLevel) }
 
     val isValid = calorieGoal.isNotBlank() && currentWeight.isNotBlank() && goalWeight.isNotBlank()
+    var showProfileMenu by rememberSaveable { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
+    Scaffold(
+        topAppBar = {
+            TopAppBar(
+                title = { Text("Set Your Goals") },
+                actions = {
+                    IconButton(onClick = { showProfileMenu = true }) {
+                        Icon(Icons.Default.AccountCircle, contentDescription = "Profile")
+                    }
+                    DropdownMenu(
+                        expanded = showProfileMenu,
+                        onDismissRequest = { showProfileMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Sign Out") },
+                            onClick = {
+                                showProfileMenu = false
+                                onSignOut()
+                            }
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
         Text(
             text = "Welcome to MealMap",
             style = MaterialTheme.typography.headlineMedium
@@ -140,6 +179,7 @@ fun OnboardingScreen(
             text = "You can revisit these settings later from the profile area.",
             style = MaterialTheme.typography.bodySmall
         )
+    }
     }
 }
 
