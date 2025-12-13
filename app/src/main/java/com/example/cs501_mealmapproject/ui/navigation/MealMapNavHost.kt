@@ -19,6 +19,7 @@ fun MealMapNavHost(
     navController: NavHostController,
     mealPlanViewModel: MealPlanViewModel,
     onboardingProfile: OnboardingProfile?,
+    currentUserId: String?,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -29,7 +30,8 @@ fun MealMapNavHost(
         composable(MealMapDestination.MealPlan.route) {
             MealPlanScreen(
                 mealPlanViewModel = mealPlanViewModel,
-                onNavigateToRecipes = {
+                onNavigateToRecipes = { date, mealType ->
+                    mealPlanViewModel.setPreSelectedSlot(date, mealType)
                     navController.navigate(MealMapDestination.Recipes.route) {
                         launchSingleTop = true
                     }
@@ -43,13 +45,13 @@ fun MealMapNavHost(
             )
         }
         composable(MealMapDestination.FoodLog.route) {
-            FoodLogScreen()
+            FoodLogScreen(currentUserId = currentUserId ?: "")
         }
         composable(MealMapDestination.Dashboard.route) {
             NutritionDashboardScreen(onboardingProfile = onboardingProfile)
         }
         composable(MealMapDestination.Shopping.route) {
-            ShoppingListScreen()
+            ShoppingListScreen(currentUserId = currentUserId)
         }
     }
 }

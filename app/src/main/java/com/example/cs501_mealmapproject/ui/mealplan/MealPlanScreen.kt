@@ -32,7 +32,7 @@ import java.time.LocalDate
 @Composable
 fun MealPlanScreen(
     mealPlanViewModel: MealPlanViewModel,
-    onNavigateToRecipes: () -> Unit = {},
+    onNavigateToRecipes: (LocalDate, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val uiState by mealPlanViewModel.uiState.collectAsState()
@@ -48,7 +48,7 @@ fun MealPlanScreen(
 private fun MealPlanContent(
     modifier: Modifier = Modifier,
     plan: List<DailyMealPlan>,
-    onNavigateToRecipes: () -> Unit = {},
+    onNavigateToRecipes: (LocalDate, String) -> Unit = { _, _ -> },
     onRemoveMeal: (LocalDate, String) -> Unit = { _, _ -> }
 ) {
     
@@ -92,10 +92,7 @@ private fun MealPlanContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { 
-                                        // Make the whole row clickable. 
-                                        // Ideally, we would pass the date/mealType to know WHERE to add the recipe.
-                                        // For now, we navigate to recipes.
-                                        onNavigateToRecipes() 
+                                        onNavigateToRecipes(dailyPlan.date, mealSlot.mealType) 
                                     }
                                     .padding(vertical = 4.dp), // Add some padding for touch target
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -140,7 +137,7 @@ private fun MealPlanScreenPreview() {
     CS501MealMapProjectTheme {
         MealPlanContent(
             plan = previewWeekPlan(),
-            onNavigateToRecipes = {}
+            onNavigateToRecipes = { _, _ -> }
         )
     }
 }

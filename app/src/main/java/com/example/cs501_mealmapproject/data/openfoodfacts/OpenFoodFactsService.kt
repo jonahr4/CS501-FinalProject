@@ -19,18 +19,31 @@ data class ProductResponse(
 data class Product(
     @Json(name = "product_name") val productName: String?,
     @Json(name = "brands") val brands: String?,
-    @Json(name = "nutriments") val nutriments: Nutriments?
+    @Json(name = "nutriments") val nutriments: Nutriments?,
+    @Json(name = "serving_size") val servingSize: String?,
+    @Json(name = "serving_quantity") val servingQuantity: Double?,
+    @Json(name = "product_quantity") val productQuantity: String?
 )
 
 @JsonClass(generateAdapter = true)
 data class Nutriments(
-    @Json(name = "energy-kcal_100g") val energyKcal: Double?,
-    @Json(name = "proteins_100g") val proteins: Double?,
-    @Json(name = "carbohydrates_100g") val carbohydrates: Double?,
-    @Json(name = "fat_100g") val fat: Double?,
-    @Json(name = "fiber_100g") val fiber: Double?,
-    @Json(name = "sugars_100g") val sugars: Double?,
-    @Json(name = "sodium_100g") val sodium: Double?
+    // Per 100g values (fallback)
+    @Json(name = "energy-kcal_100g") val energyKcal100g: Double?,
+    @Json(name = "proteins_100g") val proteins100g: Double?,
+    @Json(name = "carbohydrates_100g") val carbohydrates100g: Double?,
+    @Json(name = "fat_100g") val fat100g: Double?,
+    @Json(name = "fiber_100g") val fiber100g: Double?,
+    @Json(name = "sugars_100g") val sugars100g: Double?,
+    @Json(name = "sodium_100g") val sodium100g: Double?,
+
+    // Per serving values (preferred)
+    @Json(name = "energy-kcal_serving") val energyKcalServing: Double?,
+    @Json(name = "proteins_serving") val proteinsServing: Double?,
+    @Json(name = "carbohydrates_serving") val carbohydratesServing: Double?,
+    @Json(name = "fat_serving") val fatServing: Double?,
+    @Json(name = "fiber_serving") val fiberServing: Double?,
+    @Json(name = "sugars_serving") val sugarsServing: Double?,
+    @Json(name = "sodium_serving") val sodiumServing: Double?
 )
 
 interface OpenFoodFactsApi {

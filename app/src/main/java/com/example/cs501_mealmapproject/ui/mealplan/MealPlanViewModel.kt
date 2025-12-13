@@ -1,6 +1,8 @@
 package com.example.cs501_mealmapproject.ui.mealplan
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
@@ -19,6 +21,9 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
 
     private val mealPlanRepository = MealPlanRepository(application)
     private val authRepository = AuthRepository(application)
+    private val appContext = application.applicationContext
+    private var currentUserId: String? = null
+    private var prefs: SharedPreferences = application.getSharedPreferences("meal_plan_prefs", Context.MODE_PRIVATE)
 
     private val _uiState = MutableStateFlow(MealPlanUiState(plan = generateWeekPlan()))
     val uiState: StateFlow<MealPlanUiState> = _uiState.asStateFlow()
@@ -65,6 +70,21 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
                 Log.d("MealPlanViewModel", "Synced meal plans from Firestore")
             }
         }
+    /**
+     * Set the current user and load their meal plan data.
+     * Call this when user signs in or when the ViewModel is first created with a signed-in user.
+     */
+    fun setCurrentUser(userId: String) {
+        if (currentUserId == userId) return // Already set for this user
+        
+        currentUserId = userId
+        // Use user-specific SharedPreferences
+        prefs = appContext.getSharedPreferences("meal_plan_prefs_$userId", Context.MODE_PRIVATE)
+        
+        // Load this user's meal plan
+        val savedPlan = loadSavedPlan()
+        _uiState.value = MealPlanUiState(plan = savedPlan ?: generateWeekPlan())
+        Log.d("MealPlanVM", "Loaded meal plan for user: $userId")
     }
 
     fun assignMeal(date: LocalDate, mealType: String, recipeName: String) {
@@ -90,6 +110,22 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
             val userId = authRepository.currentUser?.uid
             if (userId != null) {
                 mealPlanRepository.deleteMealPlan(userId, date.toString(), mealType)
+    fun setPreSelectedSlot(date: LocalDate, mealType: String) {
+        _uiState.update { it.copy(preSelectedDate = date, preSelectedMealType = mealType) }
+    }
+
+    fun clearPreSelectedSlot() {
+        _uiState.update { it.copy(preSelectedDate = null, preSelectedMealType = null) }
+    }
+
+    private fun savePlanToPrefs() {
+        try {
+            val lines = _uiState.value.plan.flatMap { day ->
+                day.meals.map { slot ->
+                    // date|mealType|recipeName (recipeName may contain pipes/newlines so escape by replacing)
+                    val safeRecipe = slot.recipeName.replace("|", "\\|").replace("\n", " ")
+                    "${day.date}|${slot.mealType}|$safeRecipe"
+                }
             }
         }
         assignMeal(date, mealType, "Tap to add a recipe")
@@ -124,13 +160,17 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
         private val defaultMeals = listOf(
             MealSlot("Breakfast", "Tap to add a recipe"),
             MealSlot("Lunch", "Tap to add a recipe"),
-            MealSlot("Dinner", "Tap to add a recipe")
+            MealSlot("Dinner", "Tap to add a recipe"),
+            MealSlot("Snack", "Tap to add a recipe")
         )
+        private const val PREF_KEY = "meal_plan_serialized_v2"
     }
 }
 
 data class MealPlanUiState(
-    val plan: List<DailyMealPlan> = emptyList()
+    val plan: List<DailyMealPlan> = emptyList(),
+    val preSelectedDate: LocalDate? = null,
+    val preSelectedMealType: String? = null
 )
 
 data class DailyMealPlan(
