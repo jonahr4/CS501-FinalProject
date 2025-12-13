@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.cs501_mealmapproject.data.auth.AuthRepository
 import com.example.cs501_mealmapproject.data.database.AppDatabase
 import com.example.cs501_mealmapproject.data.database.FoodLogEntity
 import com.example.cs501_mealmapproject.data.database.RecipeCacheEntity
@@ -13,6 +14,7 @@ import com.example.cs501_mealmapproject.data.database.IngredientWithMeasure
 import com.example.cs501_mealmapproject.data.nutrition.FoodItem
 import com.example.cs501_mealmapproject.data.nutrition.NutritionApi
 import com.example.cs501_mealmapproject.data.openfoodfacts.OpenFoodFactsService
+import com.example.cs501_mealmapproject.data.repository.FoodLogRepository
 import com.example.cs501_mealmapproject.network.MealApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -29,6 +31,8 @@ import java.time.format.DateTimeFormatter
 
 class FoodLogViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val foodLogRepository = FoodLogRepository(application)
+    private val authRepository = AuthRepository(application)
     private val database = AppDatabase.getDatabase(application)
     private val foodLogDao = database.foodLogDao()
     private val recipeCacheDao = database.recipeCacheDao()
@@ -50,6 +54,15 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
     // Search cache to avoid repeated API calls
     private val searchCache = mutableMapOf<String, List<FoodItem>>()
 
+    private suspend fun logAndSync(entity: FoodLogEntity) {
+        val userId = authRepository.currentUser?.uid
+        if (userId != null) {
+            foodLogRepository.insertFoodLog(userId, entity)
+        } else {
+            foodLogDao.insertFoodLog(entity)
+        }
+    }
+
     init {
         loadFoodLogs()
         loadFavorites()
@@ -64,7 +77,11 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
         if (currentUserId == userId) return
         currentUserId = userId
         prefs = appContext.getSharedPreferences("meal_plan_prefs_$userId", Context.MODE_PRIVATE)
-        loadTodaysPlannedMeals()
+        viewModelScope.launch {
+            foodLogDao.deleteAllFoodLogs()
+            foodLogRepository.syncFromFirestore(userId)
+            loadTodaysPlannedMeals()
+        }
     }
 
     private fun loadFoodLogs() {
@@ -474,7 +491,10 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
 
     fun deleteLog(id: Long) {
         viewModelScope.launch {
-            foodLogDao.deleteFoodLog(id)
+            val userId = authRepository.currentUser?.uid
+            if (userId != null) {
+                foodLogRepository.deleteFoodLog(userId, id)
+            }
         }
     }
     
@@ -483,7 +503,12 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
      */
     fun toggleFavorite(id: Long, isFavorite: Boolean) {
         viewModelScope.launch {
-            foodLogDao.setFavorite(id, isFavorite)
+            val userId = authRepository.currentUser?.uid
+            if (userId != null) {
+                foodLogRepository.setFavorite(userId, id, isFavorite)
+            } else {
+                foodLogDao.setFavorite(id, isFavorite)
+            }
         }
     }
     
@@ -613,7 +638,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 source = if (foodItem.brand != null) "USDA • ${foodItem.brand}" else "USDA Database",
                 loggedTime = currentTime
             )
-            foodLogDao.insertFoodLog(entity)
+            logAndSync(entity)
             Log.d("FoodLogViewModel", "Logged: ${foodItem.name} x$servings servings")
         }
     }
@@ -727,7 +752,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 loggedTime = currentTime
             )
             
-            foodLogDao.insertFoodLog(entity)
+            logAndSync(entity)
             Log.d("FoodLogViewModel", "Saved custom meal: ${builder.mealName} with ${builder.ingredients.size} ingredients")
             
             // Clear the meal builder
@@ -770,7 +795,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 imageUrl = plannedMeal.imageUrl,
                 loggedTime = currentTime
             )
-            foodLogDao.insertFoodLog(entity)
+            logAndSync(entity)
             Log.d("FoodLogViewModel", "Logged planned meal: ${plannedMeal.recipeName} with ${(plannedMeal.estimatedCalories * servings).toInt()} cal")
         }
     }
@@ -800,7 +825,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 imageUrl = previousEntry.imageUrl,
                 loggedTime = currentTime
             )
-            foodLogDao.insertFoodLog(entity)
+            logAndSync(entity)
             Log.d("FoodLogViewModel", "Re-logged: ${previousEntry.meal}")
         }
     }
@@ -824,7 +849,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 source = "Quick Add",
                 loggedTime = currentTime
             )
-            foodLogDao.insertFoodLog(entity)
+            logAndSync(entity)
             Log.d("FoodLogViewModel", "Quick added: $calories calories")
         }
     }
@@ -852,7 +877,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                     timestamp = System.currentTimeMillis(),
                     loggedTime = currentTime
                 )
-                foodLogDao.insertFoodLog(newEntity)
+                logAndSync(newEntity)
             }
             
             Log.d("FoodLogViewModel", "Copied ${sourceLogs.size} meals from $sourceDate")
@@ -873,8 +898,12 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
         mealType: MealType = MealType.SNACK
     ) {
         viewModelScope.launch {
+            val userId = authRepository.currentUser?.uid
+            if (userId != null) {
+                Log.d("FoodLogViewModel", "User logged in for manual log")
+            }
             val currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("hh:mm a"))
-            
+
             val entity = FoodLogEntity(
                 mealName = mealName,
                 calories = calories,
@@ -890,13 +919,19 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 source = "Manual entry",
                 loggedTime = currentTime
             )
-            foodLogDao.insertFoodLog(entity)
+            logAndSync(entity)
             Log.d("FoodLogViewModel", "Saved manual log: $mealName")
         }
     }
 
     fun addLogFromBarcode(barcode: String, mealType: MealType = MealType.SNACK) {
         viewModelScope.launch {
+            val userId = authRepository.currentUser?.uid
+            if (userId == null) {
+                Log.w("FoodLogViewModel", "User not logged in, cannot add barcode log")
+                return@launch
+            }
+
             try {
                 Log.d("FoodLogViewModel", "Fetching product for barcode: $barcode")
                 val response = OpenFoodFactsService.api.getProduct(barcode)
@@ -960,7 +995,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                         source = sourceLabel,
                         loggedTime = currentTime
                     )
-                    foodLogDao.insertFoodLog(entity)
+                    foodLogRepository.insertFoodLog(userId, entity)
                 } else {
                     Log.w("FoodLogViewModel", "Product not found for barcode: $barcode")
                     val entity = FoodLogEntity(
@@ -975,7 +1010,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                         source = "Scanned • Barcode: $barcode (not found)",
                         loggedTime = currentTime
                     )
-                    foodLogDao.insertFoodLog(entity)
+                    foodLogRepository.insertFoodLog(userId, entity)
                 }
             } catch (e: Exception) {
                 Log.e("FoodLogViewModel", "Error fetching product", e)
@@ -992,7 +1027,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                     source = "Scanned • Barcode: $barcode (error)",
                     loggedTime = currentTime
                 )
-                foodLogDao.insertFoodLog(entity)
+                foodLogRepository.insertFoodLog(userId, entity)
             }
         }
     }

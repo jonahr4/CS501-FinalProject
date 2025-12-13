@@ -7,6 +7,10 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cs501_mealmapproject.data.auth.AuthRepository
+import com.example.cs501_mealmapproject.data.database.AppDatabase
+import com.example.cs501_mealmapproject.data.repository.FoodLogRepository
+import com.example.cs501_mealmapproject.data.repository.MealPlanRepository
+import com.example.cs501_mealmapproject.data.repository.UserRepository
 import com.example.cs501_mealmapproject.ui.model.AppUser
 import com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel
 import com.example.cs501_mealmapproject.ui.onboarding.OnboardingProfile
@@ -21,6 +25,10 @@ import kotlinx.coroutines.launch
 class SessionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val authRepository = AuthRepository(application)
+    private val userRepository = UserRepository()
+    private val foodLogRepository = FoodLogRepository(application)
+    private val mealPlanRepository = MealPlanRepository(application)
+    private val database = AppDatabase.getDatabase(application)
     private val appContext = application.applicationContext
 
     private val _uiState = MutableStateFlow(SessionState())
@@ -31,6 +39,32 @@ class SessionViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             authRepository.observeAuthState().collect { firebaseUser ->
                 if (firebaseUser != null) {
+                    val appUser = AppUser(
+                        id = firebaseUser.uid,
+                        displayName = firebaseUser.displayName ?: "User",
+                        email = firebaseUser.email,
+                        photoUrl = firebaseUser.photoUrl?.toString()
+                    )
+
+                    // Save user profile to Firestore
+                    userRepository.saveUserProfile(appUser)
+
+                    // Load onboarding profile from Firestore
+                    val onboardingProfile = userRepository.getOnboardingProfile(firebaseUser.uid)
+
+                    // Sync food logs and meal plans from Firestore (one-time sync on login)
+                    foodLogRepository.syncFromFirestore(firebaseUser.uid)
+                    mealPlanRepository.syncFromFirestore(firebaseUser.uid)
+
+                    _uiState.update {
+                        it.copy(
+                            user = appUser,
+                            onboardingProfile = onboardingProfile,
+                            onboardingComplete = onboardingProfile != null
+                        )
+                    }
+
+                    Log.d("SessionViewModel", "User profile loaded. Onboarding complete: ${onboardingProfile != null}")
                     // Load saved onboarding profile for this user
                     val savedProfile = loadOnboardingProfile(firebaseUser.uid)
                     

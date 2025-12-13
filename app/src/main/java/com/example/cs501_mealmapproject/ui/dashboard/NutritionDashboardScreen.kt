@@ -1,24 +1,31 @@
 package com.example.cs501_mealmapproject.ui.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +59,8 @@ private fun NutritionDashboardContent(
     modifier: Modifier = Modifier,
     uiState: NutritionDashboardUiState
 ) {
+    var showGoalDialog by remember { mutableStateOf(false) }
+
     LazyColumn(
         modifier = modifier
             .fillMaxWidth()
@@ -59,11 +68,20 @@ private fun NutritionDashboardContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Text(
-                text = "Today's Nutrition",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Today's Nutrition",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = { showGoalDialog = true }) {
+                    Text("How goals are calculated")
+                }
+            }
         }
 
         item {
@@ -76,11 +94,9 @@ private fun NutritionDashboardContent(
 
         // Calories Card
         item {
-            NutritionMetricCard(
-                label = "Calories",
+            CalorieRingCard(
                 consumed = uiState.caloriesConsumed.toFloat(),
                 goal = uiState.caloriesGoal.toFloat(),
-                unit = "cal",
                 color = MaterialTheme.colorScheme.primary
             )
         }
@@ -128,22 +144,105 @@ private fun NutritionDashboardContent(
             )
         }
 
-        // Weight Progress Card
-        if (uiState.currentWeight > 0 && uiState.goalWeight > 0) {
-            item {
-                Text(
-                    text = "Weight Progress",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
+    }
 
-            item {
-                WeightProgressCard(
-                    currentWeight = uiState.currentWeight,
-                    goalWeight = uiState.goalWeight
-                )
+    if (showGoalDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showGoalDialog = false },
+            confirmButton = {
+                TextButton(onClick = { showGoalDialog = false }) { Text("Close") }
+            },
+            title = { Text("How goals are calculated", style = MaterialTheme.typography.titleLarge) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("• Calories = base goal × activity factor", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Protein ≈ 0.8g per lb of current weight", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Fat ≈ 30% of adjusted calories (9 cal/g)", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Carbs use remaining calories (4 cal/g)", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Activity factors: Sedentary 0.9, Light 1.0, Moderate 1.05, Active 1.15", style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun CalorieRingCard(
+    consumed: Float,
+    goal: Float,
+    color: androidx.compose.ui.graphics.Color
+) {
+    val ratio = if (goal > 0) consumed / goal else 0f
+    val ringProgress = ratio.coerceIn(0f, 1f)
+    val percentage = (ratio * 100).roundToInt()
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Calories",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        progress = { ringProgress },
+                        modifier = Modifier.size(200.dp),
+                        strokeWidth = 16.dp,
+                        color = color,
+                        trackColor = MaterialTheme.colorScheme.surface
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${consumed.roundToInt()} / ${goal.roundToInt()}",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "calories",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$percentage% of goal",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = color
+                    )
+                    val status = when {
+                        ratio > 1.1f -> "Exceeds too much"
+                        ratio > 1f -> "Over by ${((ratio - 1f) * 100).roundToInt()}%"
+                        consumed >= goal -> "Goal reached"
+                        ratio >= 0.75f -> "Almost there"
+                        ratio >= 0.5f -> "Keep it up"
+                        ratio > 0f -> "Just starting"
+                        else -> "No intake logged"
+                    }
+                    Text(
+                        text = status,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (ratio > 1.1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -157,8 +256,9 @@ private fun NutritionMetricCard(
     unit: String,
     color: androidx.compose.ui.graphics.Color
 ) {
-    val progress = if (goal > 0) (consumed / goal).coerceIn(0f, 1f) else 0f
-    val percentage = (progress * 100).roundToInt()
+    val ratio = if (goal > 0) consumed / goal else 0f
+    val progress = ratio.coerceIn(0f, 1f)
+    val percentage = (ratio * 100).roundToInt()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -183,12 +283,12 @@ private fun NutritionMetricCard(
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = "$percentage%",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = color,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                text = "$percentage%",
+                style = MaterialTheme.typography.titleSmall,
+                color = color,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
             LinearProgressIndicator(
                 progress = { progress },
@@ -218,84 +318,19 @@ private fun NutritionMetricCard(
 
             // Status message
             val statusText = when {
+                ratio > 1.1f -> "Exceeds too much"
+                ratio > 1f -> "Over goal"
                 consumed >= goal -> "Goal reached! 🎉"
-                progress >= 0.75f -> "Almost there!"
-                progress >= 0.5f -> "Halfway to goal"
-                progress > 0f -> "Keep going!"
+                ratio >= 0.75f -> "Almost there!"
+                ratio >= 0.5f -> "Halfway to goal"
+                ratio > 0f -> "Keep going!"
                 else -> "No intake logged yet"
             }
 
             Text(
                 text = statusText,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun WeightProgressCard(
-    currentWeight: Float,
-    goalWeight: Float
-) {
-    val difference = currentWeight - goalWeight
-    val isGaining = difference < 0
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "Current Weight",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${currentWeight.roundToInt()} lbs",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = "Goal Weight",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${goalWeight.roundToInt()} lbs",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = if (isGaining) {
-                    "${kotlin.math.abs(difference).roundToInt()} lbs to gain"
-                } else {
-                    "${kotlin.math.abs(difference).roundToInt()} lbs to lose"
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (ratio > 1.1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -315,8 +350,6 @@ private fun NutritionDashboardPreview() {
                 carbsGoal = 200f,
                 fatConsumed = 55f,
                 fatGoal = 67f,
-                currentWeight = 165f,
-                goalWeight = 150f,
                 mealsLoggedToday = 3
             )
         )

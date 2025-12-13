@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
     id("kotlin-kapt")
     id("com.google.gms.google-services")
 }
@@ -54,6 +55,16 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
+
+    // KSP source sets for generated code
+    applicationVariants.all {
+        val variantName = name
+        sourceSets {
+            getByName(variantName) {
+                kotlin.srcDir("build/generated/ksp/$variantName/kotlin")
+            }
+        }
+    }
 }
 
 dependencies {
@@ -91,15 +102,17 @@ dependencies {
     // Room database
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
 
     // Corrected the alias for the Google Fonts dependency
     implementation(libs.google.fonts)
 
-    // Firebase Authentication
+    // Firebase Authentication & Firestore
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
