@@ -129,7 +129,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
             MealSlot("Dinner", "Tap to add a recipe"),
             MealSlot("Snack", "Tap to add a recipe")
         )
-        private const val PREF_KEY = "meal_plan_serialized_v1"
+        private const val PREF_KEY = "meal_plan_serialized_v2"
     }
 }
 

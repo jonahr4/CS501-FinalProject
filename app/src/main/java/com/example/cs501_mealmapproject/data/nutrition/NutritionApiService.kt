@@ -111,7 +111,7 @@ interface NutritionApiService {
     
     companion object {
         // Demo key for development - replace with your own key for production
-        const val API_KEY = "DEMO_KEY"
+        const val API_KEY = "9bmts7HkHc7L3gfo9dB19B8MbLRzMK7ZEwlK821a"
     }
 }
 

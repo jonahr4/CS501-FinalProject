@@ -364,7 +364,7 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
     }
     
     private fun getMealPlanHash(): String {
-        val raw = prefs.getString("meal_plan_serialized_v1", null) ?: return ""
+        val raw = prefs.getString("meal_plan_serialized_v2", null) ?: return ""
         return raw.hashCode().toString()
     }
     
@@ -676,7 +676,7 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
     }
 
     private fun loadMealInstancesFromMealPlan(): List<MealInstance> {
-        val raw = prefs.getString("meal_plan_serialized_v1", null) ?: return emptyList()
+        val raw = prefs.getString("meal_plan_serialized_v2", null) ?: return emptyList()
         return try {
             val mealInstances = mutableListOf<MealInstance>()
             raw.lines().forEach { line ->

@@ -67,7 +67,7 @@ fun OnboardingScreen(
     var showProfileMenu by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
-        topAppBar = {
+        topBar = {
             TopAppBar(
                 title = { Text("Set Your Goals") },
                 actions = {

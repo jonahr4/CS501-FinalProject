@@ -42,6 +42,13 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
     
     // For debouncing search queries
     private var searchJob: Job? = null
+    
+    // Rate limiting for USDA API (max 30 requests per minute with DEMO_KEY)
+    private var lastApiCallTime = 0L
+    private val minApiCallInterval = 2000L // 2 seconds between calls
+    
+    // Search cache to avoid repeated API calls
+    private val searchCache = mutableMapOf<String, List<FoodItem>>()
 
     init {
         loadFoodLogs()
@@ -115,14 +122,17 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
     private fun loadTodaysPlannedMeals() {
         viewModelScope.launch {
             try {
-                val raw = prefs.getString("meal_plan_serialized_v1", null)
+                val raw = prefs.getString("meal_plan_serialized_v2", null)
                 if (raw.isNullOrBlank()) {
+                    Log.d("FoodLogViewModel", "No meal plan data found")
                     _uiState.update { it.copy(todaysPlannedMeals = emptyList()) }
                     return@launch
                 }
                 
                 val today = LocalDate.now()
                 val plannedMeals = mutableListOf<PlannedMealForLog>()
+                
+                Log.d("FoodLogViewModel", "Loading planned meals for today: $today")
                 
                 raw.lines().forEach { line ->
                     if (line.isBlank()) return@forEach
@@ -135,7 +145,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                     val mealTypeStr = parts[1]
                     val recipeName = parts.subList(2, parts.size).joinToString("|").replace("\\|", "|")
                     
-                    if (recipeName != "Tap to add a recipe") {
+                    if (recipeName != "Tap to add a recipe" && recipeName.isNotBlank()) {
                         val mealType = when (mealTypeStr) {
                             "Breakfast" -> MealType.BREAKFAST
                             "Lunch" -> MealType.LUNCH
@@ -144,17 +154,28 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                             else -> MealType.SNACK
                         }
                         
+                        Log.d("FoodLogViewModel", "Found planned meal: $recipeName for $mealTypeStr")
+                        
                         // Check if recipe is in cache and get nutrition
                         val cachedRecipe = recipeCacheDao.getRecipe(recipeName)
+                        
+                        val servings = cachedRecipe?.estimatedServings ?: 4
+                        val totalCal = cachedRecipe?.totalCalories ?: 0
+                        val perServingCal = if (servings > 0) totalCal / servings else totalCal
+                        val perServingProtein = if (servings > 0) (cachedRecipe?.totalProtein ?: 0f) / servings else 0f
+                        val perServingCarbs = if (servings > 0) (cachedRecipe?.totalCarbs ?: 0f) / servings else 0f
+                        val perServingFat = if (servings > 0) (cachedRecipe?.totalFat ?: 0f) / servings else 0f
                         
                         plannedMeals.add(PlannedMealForLog(
                             recipeName = recipeName,
                             mealType = mealType,
                             date = today,
-                            estimatedCalories = cachedRecipe?.totalCalories ?: 0,
-                            estimatedProtein = cachedRecipe?.totalProtein ?: 0f,
-                            estimatedCarbs = cachedRecipe?.totalCarbs ?: 0f,
-                            estimatedFat = cachedRecipe?.totalFat ?: 0f,
+                            estimatedCalories = perServingCal,
+                            estimatedProtein = perServingProtein,
+                            estimatedCarbs = perServingCarbs,
+                            estimatedFat = perServingFat,
+                            estimatedServings = servings,
+                            totalCalories = totalCal,
                             imageUrl = cachedRecipe?.imageUrl,
                             hasNutritionData = cachedRecipe?.isNutritionCalculated == true
                         ))
@@ -248,15 +269,25 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
             var totalFiber = 0f
             var totalSugar = 0f
             var totalSodium = 0f
+            var successfulLookups = 0
+            
+            Log.d("FoodLogViewModel", "Calculating nutrition for $recipeName with ${ingredients.size} ingredients")
             
             for (ingredient in ingredients) {
                 try {
+                    // Rate limiting check
+                    val timeSinceLastCall = System.currentTimeMillis() - lastApiCallTime
+                    if (timeSinceLastCall < minApiCallInterval) {
+                        delay(minApiCallInterval - timeSinceLastCall)
+                    }
+                    
                     // Search USDA for each ingredient
+                    lastApiCallTime = System.currentTimeMillis()
                     val searchResponse = NutritionApi.api.searchFoods(ingredient.ingredient, pageSize = 1)
                     val food = searchResponse.foods?.firstOrNull()?.let { FoodItem.fromSearchResult(it) }
                     
                     if (food != null) {
-                        // Estimate portion from measure (rough estimate - assume ~100g per ingredient)
+                        // Estimate portion from measure
                         val portion = estimatePortion(ingredient.measure)
                         
                         totalCalories += (food.calories * portion).toInt()
@@ -266,12 +297,37 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                         totalFiber += food.fiber * portion
                         totalSugar += food.sugar * portion
                         totalSodium += food.sodium * portion
+                        successfulLookups++
+                        
+                        Log.d("FoodLogViewModel", "  ${ingredient.ingredient}: ${(food.calories * portion).toInt()} cal")
+                    } else {
+                        // Use fallback estimation
+                        val fallback = estimateFallbackNutrition(ingredient.ingredient, ingredient.measure)
+                        totalCalories += fallback.calories
+                        totalProtein += fallback.protein
+                        totalCarbs += fallback.carbs
+                        totalFat += fallback.fat
+                        Log.d("FoodLogViewModel", "  ${ingredient.ingredient}: ${fallback.calories} cal (fallback)")
                     }
                     
-                    // Small delay to avoid rate limiting
-                    delay(100)
+                } catch (e: retrofit2.HttpException) {
+                    if (e.code() == 429) {
+                        Log.w("FoodLogViewModel", "Rate limited, using fallback for ${ingredient.ingredient}")
+                        // Use fallback when rate limited
+                        val fallback = estimateFallbackNutrition(ingredient.ingredient, ingredient.measure)
+                        totalCalories += fallback.calories
+                        totalProtein += fallback.protein
+                        totalCarbs += fallback.carbs
+                        totalFat += fallback.fat
+                    }
                 } catch (e: Exception) {
-                    Log.w("FoodLogViewModel", "Couldn't get nutrition for ${ingredient.ingredient}", e)
+                    Log.w("FoodLogViewModel", "Couldn't get nutrition for ${ingredient.ingredient}: ${e.message}")
+                    // Use fallback
+                    val fallback = estimateFallbackNutrition(ingredient.ingredient, ingredient.measure)
+                    totalCalories += fallback.calories
+                    totalProtein += fallback.protein
+                    totalCarbs += fallback.carbs
+                    totalFat += fallback.fat
                 }
             }
             
@@ -287,7 +343,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 sodium = totalSodium
             )
             
-            Log.d("FoodLogViewModel", "Calculated nutrition for $recipeName: ${totalCalories}cal")
+            Log.d("FoodLogViewModel", "Calculated nutrition for $recipeName: ${totalCalories}cal ($successfulLookups/${ingredients.size} from API)")
             
             // Reload planned meals to show updated nutrition
             loadTodaysPlannedMeals()
@@ -295,6 +351,100 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
         } catch (e: Exception) {
             Log.e("FoodLogViewModel", "Error calculating nutrition for $recipeName", e)
         }
+    }
+    
+    /**
+     * Fallback nutrition estimation when API is unavailable
+     */
+    private data class FallbackNutrition(val calories: Int, val protein: Float, val carbs: Float, val fat: Float)
+    
+    private fun estimateFallbackNutrition(ingredient: String, measure: String): FallbackNutrition {
+        val lower = ingredient.lowercase()
+        val portion = estimatePortion(measure)
+        
+        // Base values per 100g for common food categories
+        val base: FallbackNutrition = when {
+            // Proteins
+            lower.contains("chicken") -> FallbackNutrition(165, 31f, 0f, 3.6f)
+            lower.contains("beef") || lower.contains("steak") -> FallbackNutrition(250, 26f, 0f, 17f)
+            lower.contains("pork") -> FallbackNutrition(242, 27f, 0f, 14f)
+            lower.contains("lamb") -> FallbackNutrition(294, 25f, 0f, 21f)
+            lower.contains("fish") || lower.contains("salmon") || lower.contains("tuna") -> FallbackNutrition(208, 20f, 0f, 13f)
+            lower.contains("shrimp") || lower.contains("prawn") -> FallbackNutrition(99, 24f, 0f, 0.3f)
+            lower.contains("egg") -> FallbackNutrition(155, 13f, 1f, 11f)
+            lower.contains("tofu") -> FallbackNutrition(76, 8f, 2f, 4f)
+            
+            // Dairy
+            lower.contains("milk") -> FallbackNutrition(42, 3.4f, 5f, 1f)
+            lower.contains("cheese") -> FallbackNutrition(402, 25f, 1f, 33f)
+            lower.contains("yogurt") || lower.contains("yoghurt") -> FallbackNutrition(59, 10f, 4f, 0.7f)
+            lower.contains("cream") -> FallbackNutrition(340, 2f, 3f, 36f)
+            lower.contains("butter") -> FallbackNutrition(717, 0.9f, 0f, 81f)
+            
+            // Grains & Carbs
+            lower.contains("rice") -> FallbackNutrition(130, 2.7f, 28f, 0.3f)
+            lower.contains("pasta") || lower.contains("noodle") -> FallbackNutrition(131, 5f, 25f, 1f)
+            lower.contains("bread") -> FallbackNutrition(265, 9f, 49f, 3f)
+            lower.contains("flour") -> FallbackNutrition(364, 10f, 76f, 1f)
+            lower.contains("tortilla") -> FallbackNutrition(312, 8f, 52f, 8f)
+            lower.contains("potato") -> FallbackNutrition(77, 2f, 17f, 0.1f)
+            
+            // Vegetables
+            lower.contains("onion") -> FallbackNutrition(40, 1f, 9f, 0.1f)
+            lower.contains("garlic") -> FallbackNutrition(149, 6f, 33f, 0.5f)
+            lower.contains("tomato") -> FallbackNutrition(18, 0.9f, 3.9f, 0.2f)
+            lower.contains("carrot") -> FallbackNutrition(41, 0.9f, 10f, 0.2f)
+            lower.contains("pepper") || lower.contains("capsicum") -> FallbackNutrition(31, 1f, 6f, 0.3f)
+            lower.contains("spinach") -> FallbackNutrition(23, 2.9f, 3.6f, 0.4f)
+            lower.contains("broccoli") -> FallbackNutrition(34, 2.8f, 7f, 0.4f)
+            lower.contains("mushroom") -> FallbackNutrition(22, 3f, 3f, 0.3f)
+            lower.contains("ginger") -> FallbackNutrition(80, 2f, 18f, 0.8f)
+            lower.contains("celery") -> FallbackNutrition(16, 0.7f, 3f, 0.2f)
+            lower.contains("lettuce") -> FallbackNutrition(15, 1.4f, 2.9f, 0.2f)
+            lower.contains("cucumber") -> FallbackNutrition(16, 0.7f, 3.6f, 0.1f)
+            
+            // Legumes
+            lower.contains("bean") || lower.contains("lentil") -> FallbackNutrition(116, 9f, 20f, 0.4f)
+            lower.contains("chickpea") -> FallbackNutrition(164, 9f, 27f, 2.6f)
+            
+            // Oils & Fats
+            lower.contains("oil") -> FallbackNutrition(884, 0f, 0f, 100f)
+            
+            // Sauces & Condiments
+            lower.contains("sauce") || lower.contains("paste") -> FallbackNutrition(50, 1f, 10f, 0.5f)
+            lower.contains("soy sauce") -> FallbackNutrition(53, 8f, 5f, 0f)
+            lower.contains("vinegar") -> FallbackNutrition(18, 0f, 0.1f, 0f)
+            lower.contains("sugar") -> FallbackNutrition(387, 0f, 100f, 0f)
+            lower.contains("honey") -> FallbackNutrition(304, 0.3f, 82f, 0f)
+            
+            // Spices (very low cal)
+            lower.contains("salt") || lower.contains("pepper") || lower.contains("spice") ||
+            lower.contains("cumin") || lower.contains("paprika") || lower.contains("cinnamon") ||
+            lower.contains("turmeric") || lower.contains("coriander") || lower.contains("cilantro") -> FallbackNutrition(5, 0.2f, 1f, 0.1f)
+            
+            // Nuts & Seeds
+            lower.contains("almond") || lower.contains("nut") -> FallbackNutrition(579, 21f, 22f, 50f)
+            lower.contains("coconut") -> FallbackNutrition(354, 3f, 15f, 33f)
+            
+            // Fruits
+            lower.contains("lemon") || lower.contains("lime") -> FallbackNutrition(29, 1f, 9f, 0.3f)
+            lower.contains("apple") -> FallbackNutrition(52, 0.3f, 14f, 0.2f)
+            lower.contains("banana") -> FallbackNutrition(89, 1f, 23f, 0.3f)
+            
+            // Stock/Broth
+            lower.contains("stock") || lower.contains("broth") -> FallbackNutrition(10, 1f, 1f, 0.2f)
+            lower.contains("water") -> FallbackNutrition(0, 0f, 0f, 0f)
+            
+            // Default
+            else -> FallbackNutrition(50, 2f, 8f, 1f) // Conservative default
+        }
+        
+        return FallbackNutrition(
+            calories = (base.calories * portion).toInt(),
+            protein = base.protein * portion,
+            carbs = base.carbs * portion,
+            fat = base.fat * portion
+        )
     }
     
     /**
@@ -373,7 +523,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
     }
     
     /**
-     * Search for foods using USDA FoodData Central API
+     * Search for foods using USDA FoodData Central API with rate limiting
      */
     fun searchFoods(query: String) {
         searchJob?.cancel()
@@ -383,19 +533,51 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
             return
         }
         
+        // Check cache first
+        val cacheKey = query.lowercase().trim()
+        if (searchCache.containsKey(cacheKey)) {
+            Log.d("FoodLogViewModel", "Using cached results for: $query")
+            _uiState.update { it.copy(searchResults = searchCache[cacheKey] ?: emptyList(), isSearching = false) }
+            return
+        }
+        
         searchJob = viewModelScope.launch {
             delay(300)
             
             _uiState.update { it.copy(isSearching = true, searchError = null) }
             
+            // Rate limiting: wait if needed
+            val timeSinceLastCall = System.currentTimeMillis() - lastApiCallTime
+            if (timeSinceLastCall < minApiCallInterval) {
+                val waitTime = minApiCallInterval - timeSinceLastCall
+                Log.d("FoodLogViewModel", "Rate limiting: waiting ${waitTime}ms")
+                delay(waitTime)
+            }
+            
             try {
                 Log.d("FoodLogViewModel", "Searching for: $query")
+                lastApiCallTime = System.currentTimeMillis()
                 val response = NutritionApi.api.searchFoods(query)
                 
                 val foods = response.foods?.map { FoodItem.fromSearchResult(it) } ?: emptyList()
                 Log.d("FoodLogViewModel", "Found ${foods.size} results")
                 
+                // Cache the results
+                searchCache[cacheKey] = foods
+                
                 _uiState.update { it.copy(searchResults = foods, isSearching = false) }
+            } catch (e: retrofit2.HttpException) {
+                if (e.code() == 429) {
+                    Log.e("FoodLogViewModel", "Rate limit exceeded, please wait")
+                    _uiState.update { it.copy(
+                        searchResults = emptyList(), 
+                        isSearching = false, 
+                        searchError = "Too many requests. Please wait a moment and try again."
+                    )}
+                } else {
+                    Log.e("FoodLogViewModel", "Search failed", e)
+                    _uiState.update { it.copy(searchResults = emptyList(), isSearching = false, searchError = e.message) }
+                }
             } catch (e: Exception) {
                 Log.e("FoodLogViewModel", "Search failed", e)
                 _uiState.update { it.copy(searchResults = emptyList(), isSearching = false, searchError = e.message) }
@@ -435,6 +617,133 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
             Log.d("FoodLogViewModel", "Logged: ${foodItem.name} x$servings servings")
         }
     }
+    
+    // ==================== MEAL BUILDER FUNCTIONS ====================
+    
+    /**
+     * Start building a custom meal with multiple ingredients
+     */
+    fun startMealBuilder(mealName: String = "", mealType: MealType = MealType.SNACK) {
+        _uiState.update { it.copy(mealBuilder = MealBuilder(mealName = mealName, mealType = mealType)) }
+        Log.d("FoodLogViewModel", "Started meal builder for: $mealName")
+    }
+    
+    /**
+     * Update the meal name in the builder
+     */
+    fun updateMealBuilderName(name: String) {
+        _uiState.update { state ->
+            state.mealBuilder?.let {
+                state.copy(mealBuilder = it.copy(mealName = name))
+            } ?: state
+        }
+    }
+    
+    /**
+     * Update the meal type in the builder
+     */
+    fun updateMealBuilderType(mealType: MealType) {
+        _uiState.update { state ->
+            state.mealBuilder?.let {
+                state.copy(mealBuilder = it.copy(mealType = mealType))
+            } ?: state
+        }
+    }
+    
+    /**
+     * Add an ingredient to the meal builder
+     */
+    fun addIngredientToBuilder(foodItem: FoodItem, servings: Float = 1f) {
+        _uiState.update { state ->
+            state.mealBuilder?.let { builder ->
+                val newIngredient = MealIngredient(foodItem, servings)
+                val updatedIngredients = builder.ingredients + newIngredient
+                Log.d("FoodLogViewModel", "Added ${foodItem.name} x$servings to meal builder (${updatedIngredients.size} total)")
+                state.copy(mealBuilder = builder.copy(ingredients = updatedIngredients))
+            } ?: state
+        }
+    }
+    
+    /**
+     * Remove an ingredient from the meal builder
+     */
+    fun removeIngredientFromBuilder(index: Int) {
+        _uiState.update { state ->
+            state.mealBuilder?.let { builder ->
+                val updatedIngredients = builder.ingredients.filterIndexed { i, _ -> i != index }
+                Log.d("FoodLogViewModel", "Removed ingredient at index $index")
+                state.copy(mealBuilder = builder.copy(ingredients = updatedIngredients))
+            } ?: state
+        }
+    }
+    
+    /**
+     * Update servings for an ingredient in the meal builder
+     */
+    fun updateIngredientServings(index: Int, servings: Float) {
+        _uiState.update { state ->
+            state.mealBuilder?.let { builder ->
+                val updatedIngredients = builder.ingredients.mapIndexed { i, ingredient ->
+                    if (i == index) ingredient.copy(servings = servings) else ingredient
+                }
+                state.copy(mealBuilder = builder.copy(ingredients = updatedIngredients))
+            } ?: state
+        }
+    }
+    
+    /**
+     * Save the built meal to the food log
+     */
+    fun saveMealBuilder() {
+        viewModelScope.launch {
+            val builder = _uiState.value.mealBuilder ?: return@launch
+            
+            if (!builder.isValid) {
+                Log.w("FoodLogViewModel", "Cannot save invalid meal builder")
+                return@launch
+            }
+            
+            val currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("hh:mm a"))
+            
+            // Create a notes string with ingredient breakdown
+            val ingredientList = builder.ingredients.joinToString("\n") { ingredient ->
+                "${ingredient.foodItem.name} (${ingredient.servings}x ${ingredient.foodItem.servingSize ?: "serving"})"
+            }
+            
+            val entity = FoodLogEntity(
+                mealName = builder.mealName,
+                calories = builder.totalCalories,
+                protein = builder.totalProtein,
+                carbs = builder.totalCarbs,
+                fat = builder.totalFat,
+                fiber = builder.totalFiber,
+                sugar = builder.totalSugar,
+                sodium = builder.totalSodium,
+                servingSize = "1 meal",
+                servings = 1f,
+                mealType = builder.mealType.name,
+                source = "Custom Meal (${builder.ingredients.size} ingredients)",
+                notes = "Ingredients:\n$ingredientList",
+                loggedTime = currentTime
+            )
+            
+            foodLogDao.insertFoodLog(entity)
+            Log.d("FoodLogViewModel", "Saved custom meal: ${builder.mealName} with ${builder.ingredients.size} ingredients")
+            
+            // Clear the meal builder
+            _uiState.update { it.copy(mealBuilder = null) }
+        }
+    }
+    
+    /**
+     * Cancel meal building and discard the builder
+     */
+    fun cancelMealBuilder() {
+        _uiState.update { it.copy(mealBuilder = null) }
+        Log.d("FoodLogViewModel", "Cancelled meal builder")
+    }
+    
+    // ==================== END MEAL BUILDER FUNCTIONS ====================
 
     /**
      * Log a planned meal from the meal plan with one tap
@@ -443,19 +752,16 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("hh:mm a"))
             
-            // Get cached nutrition if available
-            val cached = recipeCacheDao.getRecipe(plannedMeal.recipeName)
-            val perServing = (cached?.estimatedServings ?: 4).toFloat()
-            
+            // Use pre-calculated per-serving values from PlannedMealForLog
             val entity = FoodLogEntity(
                 mealName = plannedMeal.recipeName,
-                calories = ((cached?.totalCalories ?: 0) / perServing * servings).toInt(),
-                protein = (cached?.totalProtein ?: 0f) / perServing * servings,
-                carbs = (cached?.totalCarbs ?: 0f) / perServing * servings,
-                fat = (cached?.totalFat ?: 0f) / perServing * servings,
-                fiber = (cached?.totalFiber ?: 0f) / perServing * servings,
-                sugar = (cached?.totalSugar ?: 0f) / perServing * servings,
-                sodium = (cached?.totalSodium ?: 0f) / perServing * servings,
+                calories = (plannedMeal.estimatedCalories * servings).toInt(),
+                protein = plannedMeal.estimatedProtein * servings,
+                carbs = plannedMeal.estimatedCarbs * servings,
+                fat = plannedMeal.estimatedFat * servings,
+                fiber = 0f,  // Not tracked per-serving yet
+                sugar = 0f,
+                sodium = 0f,
                 servingSize = "1 serving",
                 servings = servings,
                 mealType = plannedMeal.mealType.name,
@@ -465,7 +771,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 loggedTime = currentTime
             )
             foodLogDao.insertFoodLog(entity)
-            Log.d("FoodLogViewModel", "Logged planned meal: ${plannedMeal.recipeName}")
+            Log.d("FoodLogViewModel", "Logged planned meal: ${plannedMeal.recipeName} with ${(plannedMeal.estimatedCalories * servings).toInt()} cal")
         }
     }
     
@@ -652,7 +958,6 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                         servings = 1f,
                         mealType = mealType.name,
                         source = sourceLabel,
-                        imageUrl = product.imageFrontUrl,
                         loggedTime = currentTime
                     )
                     foodLogDao.insertFoodLog(entity)
@@ -750,7 +1055,9 @@ data class FoodLogUiState(
     val searchResults: List<FoodItem> = emptyList(),
     val isSearching: Boolean = false,
     val searchError: String? = null,
-    val todaysSummary: NutritionSummary = NutritionSummary(0, 0f, 0f, 0f, 0f, 0f, 0)
+    val todaysSummary: NutritionSummary = NutritionSummary(0, 0f, 0f, 0f, 0f, 0f, 0),
+    // Multi-ingredient meal builder
+    val mealBuilder: MealBuilder? = null
 )
 
 data class FoodLogEntry(
@@ -779,10 +1086,12 @@ data class PlannedMealForLog(
     val recipeName: String,
     val mealType: MealType,
     val date: LocalDate,
-    val estimatedCalories: Int = 0,
-    val estimatedProtein: Float = 0f,
-    val estimatedCarbs: Float = 0f,
-    val estimatedFat: Float = 0f,
+    val estimatedCalories: Int = 0,  // Per serving
+    val estimatedProtein: Float = 0f,  // Per serving
+    val estimatedCarbs: Float = 0f,  // Per serving
+    val estimatedFat: Float = 0f,  // Per serving
+    val estimatedServings: Int = 4,
+    val totalCalories: Int = 0,  // Full recipe
     val imageUrl: String? = null,
     val hasNutritionData: Boolean = false
 )
@@ -809,160 +1118,38 @@ enum class MealType(val displayName: String) {
         }
     }
 }
-                    val brands = product.brands ?: ""
-                    val displayName = if (brands.isNotEmpty()) {
-                        "$productName ($brands)"
-                    } else {
-                        productName
-                    }
 
-                    val nutriments = product.nutriments
-
-                    val calories = nutriments?.energyKcalServing?.toInt() 
-                        ?: nutriments?.energyKcal100g?.toInt() 
-                        ?: 0
-                    val protein = nutriments?.proteinsServing?.toFloat() 
-                        ?: nutriments?.proteins100g?.toFloat() 
-                        ?: 0f
-                    val carbs = nutriments?.carbohydratesServing?.toFloat() 
-                        ?: nutriments?.carbohydrates100g?.toFloat() 
-                        ?: 0f
-                    val fat = nutriments?.fatServing?.toFloat() 
-                        ?: nutriments?.fat100g?.toFloat() 
-                        ?: 0f
-                    val fiber = nutriments?.fiberServing?.toFloat() 
-                        ?: nutriments?.fiber100g?.toFloat() 
-                        ?: 0f
-                    val sugar = nutriments?.sugarsServing?.toFloat() 
-                        ?: nutriments?.sugars100g?.toFloat() 
-                        ?: 0f
-                    val sodium = nutriments?.sodiumServing?.toFloat() 
-                        ?: nutriments?.sodium100g?.toFloat() 
-                        ?: 0f
-
-                    val servingSize = product.servingSize ?: "1 serving"
-                    val sourceLabel = if (nutriments?.energyKcalServing != null) {
-                        "Scanned • Per serving ($servingSize)"
-                    } else {
-                        "Scanned • Per 100g"
-                    }
-
-                    Log.d("FoodLogViewModel", "Product found: $displayName")
-
-                    val entity = FoodLogEntity(
-                        mealName = displayName,
-                        calories = calories,
-                        protein = protein,
-                        carbs = carbs,
-                        fat = fat,
-                        fiber = fiber,
-                        sugar = sugar,
-                        sodium = sodium,
-                        servingSize = servingSize,
-                        servings = 1f,
-                        mealType = mealType.name,
-                        source = sourceLabel
-                    )
-                    foodLogDao.insertFoodLog(entity)
-                } else {
-                    Log.w("FoodLogViewModel", "Product not found for barcode: $barcode")
-                    val entity = FoodLogEntity(
-                        mealName = "Unknown Product",
-                        calories = 0,
-                        protein = 0f,
-                        carbs = 0f,
-                        fat = 0f,
-                        servingSize = "Unknown",
-                        servings = 1f,
-                        mealType = mealType.name,
-                        source = "Scanned • Barcode: $barcode (not found)"
-                    )
-                    foodLogDao.insertFoodLog(entity)
-                }
-            } catch (e: Exception) {
-                Log.e("FoodLogViewModel", "Error fetching product", e)
-                val entity = FoodLogEntity(
-                    mealName = "Error Loading Product",
-                    calories = 0,
-                    protein = 0f,
-                    carbs = 0f,
-                    fat = 0f,
-                    servingSize = "Unknown",
-                    servings = 1f,
-                    mealType = mealType.name,
-                    source = "Scanned • Barcode: $barcode (error)"
-                )
-                foodLogDao.insertFoodLog(entity)
-            }
-        }
-    }
+/**
+ * Meal builder for creating custom meals with multiple ingredients
+ */
+data class MealBuilder(
+    val mealName: String = "",
+    val ingredients: List<MealIngredient> = emptyList(),
+    val mealType: MealType = MealType.SNACK
+) {
+    val totalCalories: Int get() = ingredients.sumOf { it.totalCalories }
+    val totalProtein: Float get() = ingredients.sumOf { it.totalProtein.toDouble() }.toFloat()
+    val totalCarbs: Float get() = ingredients.sumOf { it.totalCarbs.toDouble() }.toFloat()
+    val totalFat: Float get() = ingredients.sumOf { it.totalFat.toDouble() }.toFloat()
+    val totalFiber: Float get() = ingredients.sumOf { it.totalFiber.toDouble() }.toFloat()
+    val totalSugar: Float get() = ingredients.sumOf { it.totalSugar.toDouble() }.toFloat()
+    val totalSodium: Float get() = ingredients.sumOf { it.totalSodium.toDouble() }.toFloat()
     
-    /**
-     * Get today's nutrition summary
-     */
-    fun getTodaysSummary(): NutritionSummary {
-        val todayStart = java.time.LocalDate.now()
-            .atStartOfDay(java.time.ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-        
-        val todaysLogs = _uiState.value.recentLogs.filter { it.timestamp >= todayStart }
-        
-        return NutritionSummary(
-            totalCalories = todaysLogs.sumOf { it.calories },
-            totalProtein = todaysLogs.sumOf { it.protein.toDouble() }.toFloat(),
-            totalCarbs = todaysLogs.sumOf { it.carbs.toDouble() }.toFloat(),
-            totalFat = todaysLogs.sumOf { it.fat.toDouble() }.toFloat(),
-            totalFiber = todaysLogs.sumOf { it.fiber.toDouble() }.toFloat(),
-            totalSugar = todaysLogs.sumOf { it.sugar.toDouble() }.toFloat(),
-            mealCount = todaysLogs.size
-        )
-    }
+    val isValid: Boolean get() = mealName.isNotBlank() && ingredients.isNotEmpty()
 }
 
-data class FoodLogUiState(
-    val recentLogs: List<FoodLogEntry> = emptyList(),
-    val searchResults: List<FoodItem> = emptyList(),
-    val isSearching: Boolean = false,
-    val searchError: String? = null
-)
-
-data class FoodLogEntry(
-    val id: Long = 0,
-    val meal: String,
-    val calories: Int,
-    val protein: Float,
-    val carbs: Float,
-    val fat: Float,
-    val fiber: Float = 0f,
-    val sugar: Float = 0f,
-    val sodium: Float = 0f,
-    val servingSize: String = "1 serving",
-    val servings: Float = 1f,
-    val mealType: MealType = MealType.SNACK,
-    val source: String,
-    val timestamp: Long = System.currentTimeMillis()
-)
-
-data class NutritionSummary(
-    val totalCalories: Int,
-    val totalProtein: Float,
-    val totalCarbs: Float,
-    val totalFat: Float,
-    val totalFiber: Float,
-    val totalSugar: Float,
-    val mealCount: Int
-)
-
-enum class MealType(val displayName: String) {
-    BREAKFAST("Breakfast"),
-    LUNCH("Lunch"),
-    DINNER("Dinner"),
-    SNACK("Snack");
-    
-    companion object {
-        fun fromString(value: String?): MealType {
-            return entries.find { it.name == value } ?: SNACK
-        }
-    }
+/**
+ * Individual ingredient in a meal builder
+ */
+data class MealIngredient(
+    val foodItem: FoodItem,
+    val servings: Float = 1f
+) {
+    val totalCalories: Int get() = (foodItem.calories * servings).toInt()
+    val totalProtein: Float get() = foodItem.protein * servings
+    val totalCarbs: Float get() = foodItem.carbs * servings
+    val totalFat: Float get() = foodItem.fat * servings
+    val totalFiber: Float get() = foodItem.fiber * servings
+    val totalSugar: Float get() = foodItem.sugar * servings
+    val totalSodium: Float get() = foodItem.sodium * servings
 }

@@ -45,7 +45,7 @@ fun MealMapNavHost(
             )
         }
         composable(MealMapDestination.FoodLog.route) {
-            FoodLogScreen()
+            FoodLogScreen(currentUserId = currentUserId ?: "")
         }
         composable(MealMapDestination.Dashboard.route) {
             NutritionDashboardScreen(onboardingProfile = onboardingProfile)

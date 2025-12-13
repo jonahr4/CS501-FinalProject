@@ -18,13 +18,13 @@ data class FoodLogEntity(
     val servingSize: String = "1 serving",
     val servings: Float = 1f,
     val mealType: String = "SNACK", // BREAKFAST, LUNCH, DINNER, SNACK
-    val source: String,      // "Manual", "Barcode", "USDA Database", "Recipe", etc.
+    val source: String,      // "Manual", "Barcode", "USDA Database", etc.
     val timestamp: Long = System.currentTimeMillis(),
     
-    // New fields for enhanced logging
-    val isFavorite: Boolean = false,      // Mark as favorite for quick re-logging
-    val notes: String = "",               // User notes about the meal
-    val fromRecipe: String? = null,       // If logged from a recipe, store recipe name
-    val loggedTime: String? = null,       // Time of day when eaten (e.g., "08:30 AM")
-    val imageUrl: String? = null          // Optional image URL (from recipe or barcode)
+    // Additional fields for enhanced logging
+    val isFavorite: Boolean = false,
+    val notes: String = "",
+    val fromRecipe: String? = null,  // If logged from a recipe
+    val loggedTime: String? = null,  // Human-readable time (e.g., "10:30 AM")
+    val imageUrl: String? = null     // Product/recipe image
 )

@@ -9,21 +9,22 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [FoodLogEntity::class, RecipeCacheEntity::class],
-    version = 4,
+    entities = [FoodLogEntity::class, PlannedMealEntity::class, RecipeCacheEntity::class],
+    version = 5,
     exportSchema = false
 )
-@TypeConverters(RecipeConverters::class)
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun foodLogDao(): FoodLogDao
+    abstract fun plannedMealDao(): PlannedMealDao
     abstract fun recipeCacheDao(): RecipeCacheDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
         
-        // Migration from version 1 to 2: Add new nutrition columns to food_logs
+        // Migration from version 1 to 2: Add new nutrition columns
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE food_logs ADD COLUMN fiber REAL NOT NULL DEFAULT 0")
@@ -35,17 +36,55 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
         
-        // Migration from version 2 to 3: Add recipe_cache table
+        // Migration from version 2 to 3: Add planned_meals table
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS planned_meals (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        date TEXT NOT NULL,
+                        mealType TEXT NOT NULL,
+                        recipeName TEXT NOT NULL,
+                        recipeImageUrl TEXT,
+                        ingredients TEXT NOT NULL,
+                        instructions TEXT NOT NULL DEFAULT '',
+                        sourceUrl TEXT,
+                        estimatedCalories INTEGER NOT NULL DEFAULT 0,
+                        estimatedProtein REAL NOT NULL DEFAULT 0,
+                        estimatedCarbs REAL NOT NULL DEFAULT 0,
+                        estimatedFat REAL NOT NULL DEFAULT 0,
+                        estimatedFiber REAL NOT NULL DEFAULT 0,
+                        estimatedSugar REAL NOT NULL DEFAULT 0,
+                        estimatedSodium REAL NOT NULL DEFAULT 0,
+                        servings INTEGER NOT NULL DEFAULT 1,
+                        userId TEXT,
+                        createdAt INTEGER NOT NULL DEFAULT 0,
+                        updatedAt INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
+            }
+        }
+        
+        // Migration from version 3 to 4: Add enhanced food log fields and recipe cache
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add new columns to food_logs
+                database.execSQL("ALTER TABLE food_logs ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE food_logs ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE food_logs ADD COLUMN fromRecipe TEXT")
+                database.execSQL("ALTER TABLE food_logs ADD COLUMN loggedTime TEXT")
+                database.execSQL("ALTER TABLE food_logs ADD COLUMN imageUrl TEXT")
+                
+                // Create recipe_cache table
+                database.execSQL("""
                     CREATE TABLE IF NOT EXISTS recipe_cache (
-                        recipeName TEXT NOT NULL PRIMARY KEY,
+                        recipeName TEXT PRIMARY KEY NOT NULL,
                         imageUrl TEXT,
                         sourceUrl TEXT,
                         category TEXT,
                         area TEXT,
-                        ingredients TEXT NOT NULL DEFAULT '[]',
+                        ingredientList TEXT NOT NULL DEFAULT '[]',
+                        estimatedServings INTEGER NOT NULL DEFAULT 4,
                         totalCalories INTEGER NOT NULL DEFAULT 0,
                         totalProtein REAL NOT NULL DEFAULT 0,
                         totalCarbs REAL NOT NULL DEFAULT 0,
@@ -53,24 +92,37 @@ abstract class AppDatabase : RoomDatabase() {
                         totalFiber REAL NOT NULL DEFAULT 0,
                         totalSugar REAL NOT NULL DEFAULT 0,
                         totalSodium REAL NOT NULL DEFAULT 0,
-                        estimatedServings INTEGER NOT NULL DEFAULT 4,
-                        cachedAt INTEGER NOT NULL DEFAULT 0,
-                        nutritionCalculatedAt INTEGER,
                         isNutritionCalculated INTEGER NOT NULL DEFAULT 0,
-                        isFavorite INTEGER NOT NULL DEFAULT 0
+                        cachedAt INTEGER NOT NULL DEFAULT 0
                     )
-                """.trimIndent())
+                """)
             }
         }
-        
-        // Migration from version 3 to 4: Add enhanced fields to food_logs
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE food_logs ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
-                database.execSQL("ALTER TABLE food_logs ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
-                database.execSQL("ALTER TABLE food_logs ADD COLUMN fromRecipe TEXT")
-                database.execSQL("ALTER TABLE food_logs ADD COLUMN loggedTime TEXT")
-                database.execSQL("ALTER TABLE food_logs ADD COLUMN imageUrl TEXT")
+                // Drop and recreate recipe_cache table with correct column name
+                database.execSQL("DROP TABLE IF EXISTS recipe_cache")
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS recipe_cache (
+                        recipeName TEXT PRIMARY KEY NOT NULL,
+                        imageUrl TEXT,
+                        sourceUrl TEXT,
+                        category TEXT,
+                        area TEXT,
+                        ingredientList TEXT NOT NULL DEFAULT '[]',
+                        estimatedServings INTEGER NOT NULL DEFAULT 4,
+                        totalCalories INTEGER NOT NULL DEFAULT 0,
+                        totalProtein REAL NOT NULL DEFAULT 0,
+                        totalCarbs REAL NOT NULL DEFAULT 0,
+                        totalFat REAL NOT NULL DEFAULT 0,
+                        totalFiber REAL NOT NULL DEFAULT 0,
+                        totalSugar REAL NOT NULL DEFAULT 0,
+                        totalSodium REAL NOT NULL DEFAULT 0,
+                        isNutritionCalculated INTEGER NOT NULL DEFAULT 0,
+                        cachedAt INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
             }
         }
 
@@ -81,7 +133,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "mealmap_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
                 INSTANCE = instance
                 instance
