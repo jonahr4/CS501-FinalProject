@@ -67,6 +67,7 @@ fun FoodLogEntity.toFirestore(): FoodLogFirestore {
         protein = this.protein,
         carbs = this.carbs,
         fat = this.fat,
+        isFavorite = this.isFavorite,
         source = this.source,
         timestamp = this.timestamp,
         lastUpdatedAt = System.currentTimeMillis(),
@@ -82,6 +83,7 @@ fun FoodLogFirestore.toEntity(): FoodLogEntity {
         protein = this.protein,
         carbs = this.carbs,
         fat = this.fat,
+        isFavorite = this.isFavorite,
         source = this.source,
         timestamp = this.timestamp
     )

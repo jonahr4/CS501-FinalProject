@@ -48,6 +48,38 @@ class FoodLogRepository(context: Context) {
         return foodLogDao.getRecentFoodLogs(limit)
     }
 
+    suspend fun setFavorite(userId: String, id: Long, isFavorite: Boolean): Result<Unit> {
+        return try {
+            foodLogDao.setFavorite(id, isFavorite)
+
+            withContext(Dispatchers.IO) {
+                try {
+                    firestore.collection(COLLECTION_USERS)
+                        .document(userId)
+                        .collection(COLLECTION_FOOD_LOGS)
+                        .document(id.toString())
+                        .set(
+                            mapOf(
+                                "id" to id.toString(),
+                                "isFavorite" to isFavorite,
+                                "lastUpdatedAt" to System.currentTimeMillis()
+                            ),
+                            com.google.firebase.firestore.SetOptions.merge()
+                        )
+                        .await()
+                    Log.d(TAG, "Updated favorite status in Firestore for log $id")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to update favorite in Firestore", e)
+                }
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update favorite", e)
+            Result.failure(e)
+        }
+    }
+
     // ========== Write Operations (Dual Persistence) ==========
 
     /**

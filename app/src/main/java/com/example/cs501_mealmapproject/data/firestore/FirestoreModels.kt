@@ -38,6 +38,7 @@ data class FoodLogFirestore(
     @PropertyName("protein") val protein: Float = 0f,
     @PropertyName("carbs") val carbs: Float = 0f,
     @PropertyName("fat") val fat: Float = 0f,
+    @PropertyName("isFavorite") val isFavorite: Boolean = false,
     @PropertyName("source") val source: String = "",
     @PropertyName("timestamp") val timestamp: Long = System.currentTimeMillis(),
     @PropertyName("lastUpdatedAt") val lastUpdatedAt: Long = System.currentTimeMillis(),
