@@ -146,7 +146,29 @@ fun RecipeDiscoveryScreen(
     selectedRecipe?.let { recipe ->
         RecipeDetailDialog(
             recipe = recipe,
-            onAddToPlanner = { plannerTarget = recipe },
+            onAddToPlanner = {
+                // Check if we have a pre-selected slot
+                val preDate = planState.preSelectedDate
+                val preMealType = planState.preSelectedMealType
+                if (preDate != null && preMealType != null) {
+                    // Auto-assign to the pre-selected slot
+                    mealPlanViewModel.assignMeal(
+                        preDate,
+                        preMealType,
+                        recipe.title
+                    )
+                    mealPlanViewModel.clearPreSelectedSlot()
+                    selectedRecipe = null
+                    snackbarScope.launch {
+                        snackbarHostState.showSnackbar("Added '${recipe.title}' to planner")
+                        kotlinx.coroutines.delay(1500)
+                        onRecipeAdded?.invoke()
+                    }
+                } else {
+                    // Show the planner selection dialog
+                    plannerTarget = recipe
+                }
+            },
             onDismiss = { selectedRecipe = null }
         )
     }

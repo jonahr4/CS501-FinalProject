@@ -89,12 +89,47 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
 
                     // Extract nutrition info from OpenFoodFacts
                     val nutriments = product.nutriments
-                    val calories = nutriments?.energyKcal?.toInt() ?: 0
-                    val protein = nutriments?.proteins?.toFloat() ?: 0f
-                    val carbs = nutriments?.carbohydrates?.toFloat() ?: 0f
-                    val fat = nutriments?.fat?.toFloat() ?: 0f
+
+                    // Prefer per-serving values if available
+                    val calories = when {
+                        nutriments?.energyKcalServing != null -> nutriments.energyKcalServing.toInt()
+                        else -> {
+                            // Fallback: use 100g values (user will need to adjust for serving size)
+                            Log.w("FoodLogViewModel", "No per-serving data, using per-100g values")
+                            nutriments?.energyKcal100g?.toInt() ?: 0
+                        }
+                    }
+
+                    val protein = when {
+                        nutriments?.proteinsServing != null -> nutriments.proteinsServing.toFloat()
+                        else -> nutriments?.proteins100g?.toFloat() ?: 0f
+                    }
+
+                    val carbs = when {
+                        nutriments?.carbohydratesServing != null -> nutriments.carbohydratesServing.toFloat()
+                        else -> nutriments?.carbohydrates100g?.toFloat() ?: 0f
+                    }
+
+                    val fat = when {
+                        nutriments?.fatServing != null -> nutriments.fatServing.toFloat()
+                        else -> nutriments?.fat100g?.toFloat() ?: 0f
+                    }
+
+                    // Log serving size info if available
+                    product.servingSize?.let { size ->
+                        Log.d("FoodLogViewModel", "Serving size: $size")
+                    }
+                    Log.d("FoodLogViewModel", "Nutrition - Calories: $calories, Protein: $protein, Carbs: $carbs, Fat: $fat")
 
                     Log.d("FoodLogViewModel", "Product found: $displayName")
+
+                    // Determine source label based on data type
+                    val sourceLabel = if (nutriments?.energyKcalServing != null) {
+                        val servingSizeText = product.servingSize?.let { " ($it)" } ?: ""
+                        "Scanned • Per serving$servingSizeText"
+                    } else {
+                        "Scanned • Per 100g (adjust for actual serving)"
+                    }
 
                     val entity = FoodLogEntity(
                         mealName = displayName,
@@ -102,7 +137,7 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                         protein = protein,
                         carbs = carbs,
                         fat = fat,
-                        source = "Scanned • Barcode: $barcode"
+                        source = sourceLabel
                     )
                     foodLogDao.insertFoodLog(entity)
                 } else {
