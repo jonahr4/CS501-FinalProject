@@ -76,58 +76,58 @@ private fun CameraPreview(
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
     var detectedBarcode by remember { mutableStateOf<String?>(null) }
+    val executor = remember { Executors.newSingleThreadExecutor() }
+    val previewView = remember { PreviewView(context) }
 
-    DisposableEffect(Unit) {
+    LaunchedEffect(lifecycleOwner) {
+        val cameraProvider = cameraProviderFuture.get()
+        Log.d("BarcodeScannerView", "CameraProvider ready")
+
+        val preview = Preview.Builder().build().also {
+            it.setSurfaceProvider(previewView.surfaceProvider)
+        }
+
+        val imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also {
+                it.setAnalyzer(executor, BarcodeAnalyzer { barcode ->
+                    if (detectedBarcode != barcode) {
+                        detectedBarcode = barcode
+                        onBarcodeDetected(barcode)
+                    }
+                })
+            }
+
+        val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+        try {
+            cameraProvider.unbindAll()
+            val camera = cameraProvider.bindToLifecycle(
+                lifecycleOwner,
+                cameraSelector,
+                preview,
+                imageAnalysis
+            )
+            Log.d("BarcodeScannerView", "Camera bound successfully")
+        } catch (e: Exception) {
+            Log.e("BarcodeScannerView", "Camera binding failed", e)
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
         onDispose {
             cameraProviderFuture.get().unbindAll()
+            executor.shutdown()
         }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
         AndroidView(
-            factory = { ctx ->
-                val previewView = PreviewView(ctx).apply {
+            factory = {
+                previewView.apply {
                     implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                 }
-                val executor = Executors.newSingleThreadExecutor()
-
-                cameraProviderFuture.addListener({
-                    val cameraProvider = cameraProviderFuture.get()
-                    Log.d("BarcodeScannerView", "CameraProvider ready")
-                    
-                    val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
-                    }
-
-                    val imageAnalysis = ImageAnalysis.Builder()
-                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                        .build()
-                        .also {
-                            it.setAnalyzer(executor, BarcodeAnalyzer { barcode ->
-                                if (detectedBarcode != barcode) {
-                                    detectedBarcode = barcode
-                                    onBarcodeDetected(barcode)
-                                }
-                            })
-                        }
-
-                    val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-                    try {
-                        cameraProvider.unbindAll()
-                        val camera = cameraProvider.bindToLifecycle(
-                            lifecycleOwner,
-                            cameraSelector,
-                            preview,
-                            imageAnalysis
-                        )
-                        Log.d("BarcodeScannerView", "Camera bound successfully")
-                    } catch (e: Exception) {
-                        Log.e("BarcodeScannerView", "Camera binding failed", e)
-                    }
-                }, ContextCompat.getMainExecutor(ctx))
-
-                previewView
             },
             modifier = Modifier.fillMaxSize()
         )

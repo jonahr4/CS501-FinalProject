@@ -2,6 +2,8 @@ package com.example.cs501_mealmapproject.ui.foodlog
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,9 +30,11 @@ data class ManualFoodEntry(
     val calories: Int,
     val protein: Float,
     val carbs: Float,
-    val fat: Float
+    val fat: Float,
+    val mealType: MealType = MealType.SNACK
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ManualEntryDialog(
     onDismiss: () -> Unit,
@@ -40,6 +45,7 @@ fun ManualEntryDialog(
     var protein by remember { mutableStateOf("") }
     var carbs by remember { mutableStateOf("") }
     var fat by remember { mutableStateOf("") }
+    var selectedMealType by remember { mutableStateOf(MealType.SNACK) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -54,11 +60,31 @@ fun ManualEntryDialog(
                 OutlinedTextField(
                     value = mealName,
                     onValueChange = { mealName = it },
-                    label = { Text("Meal Name") },
+                    label = { Text("Food Name") },
                     placeholder = { Text("e.g., Chicken Salad") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                
+                // Meal type selection
+                Text(
+                    text = "Meal Type",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    MealType.entries.forEach { mealType ->
+                        FilterChip(
+                            selected = mealType == selectedMealType,
+                            onClick = { selectedMealType = mealType },
+                            label = { Text(mealType.displayName) }
+                        )
+                    }
+                }
 
                 Text(
                     text = "Nutrition Information",
@@ -122,7 +148,8 @@ fun ManualEntryDialog(
                                 calories = calories.toIntOrNull() ?: 0,
                                 protein = protein.toFloatOrNull() ?: 0f,
                                 carbs = carbs.toFloatOrNull() ?: 0f,
-                                fat = fat.toFloatOrNull() ?: 0f
+                                fat = fat.toFloatOrNull() ?: 0f,
+                                mealType = selectedMealType
                             )
                         )
                     }
@@ -138,4 +165,17 @@ fun ManualEntryDialog(
             }
         }
     )
+}
+
+/**
+ * Enhanced manual entry dialog with more fields
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun EnhancedManualEntryDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (ManualFoodEntry) -> Unit
+) {
+    // Just use the regular dialog - it's already been enhanced
+    ManualEntryDialog(onDismiss = onDismiss, onConfirm = onConfirm)
 }
