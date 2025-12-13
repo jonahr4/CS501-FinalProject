@@ -50,7 +50,15 @@ class NutritionDashboardViewModel(application: Application) : AndroidViewModel(a
                 val totalFat = todaysLogs.sumOf { it.fat.toDouble() }.toFloat()
 
                 val profile = currentProfile
-                val calorieGoal = profile?.calorieTarget ?: 2000
+                val baseCalorieGoal = profile?.calorieTarget ?: 2000
+                val activityLevel = profile?.activityLevel ?: com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Moderate
+                val activityFactor = when (activityLevel) {
+                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Sedentary -> 0.9f
+                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Light -> 1.0f
+                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Moderate -> 1.05f
+                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Active -> 1.15f
+                }
+                val calorieGoal = (baseCalorieGoal * activityFactor).toInt()
 
                 // Calculate macro goals from calorie goal (typical: 30% protein, 40% carbs, 30% fat)
                 val proteinGoal = (calorieGoal * 0.30 / 4).toFloat()  // 4 calories per gram
@@ -68,7 +76,10 @@ class NutritionDashboardViewModel(application: Application) : AndroidViewModel(a
                     fatGoal = fatGoal,
                     currentWeight = profile?.currentWeightLbs ?: 0f,
                     goalWeight = profile?.goalWeightLbs ?: 0f,
-                    mealsLoggedToday = todaysLogs.size
+                    mealsLoggedToday = todaysLogs.size,
+                    activityLevel = activityLevel,
+                    baseCalorieGoal = baseCalorieGoal,
+                    activityFactor = activityFactor
                 )
             }
         }
@@ -86,5 +97,8 @@ data class NutritionDashboardUiState(
     val fatGoal: Float = 67f,
     val currentWeight: Float = 0f,
     val goalWeight: Float = 0f,
-    val mealsLoggedToday: Int = 0
+    val mealsLoggedToday: Int = 0,
+    val activityLevel: com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel = com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Moderate,
+    val baseCalorieGoal: Int = 2000,
+    val activityFactor: Float = 1.0f
 )
