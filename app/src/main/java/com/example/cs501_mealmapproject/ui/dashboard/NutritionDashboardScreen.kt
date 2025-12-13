@@ -152,11 +152,15 @@ private fun NutritionDashboardContent(
             confirmButton = {
                 TextButton(onClick = { showGoalDialog = false }) { Text("Close") }
             },
-            title = { Text("How goals are calculated") },
+            title = { Text("How goals are calculated", style = MaterialTheme.typography.titleLarge) },
             text = {
-                Text(
-                    "Calorie goal = base goal x activity factor. Protein ~30%, Carbs ~40%, Fat ~30% of adjusted calories (protein/carbs 4 cal/g, fat 9 cal/g). Activity factors: Sedentary 0.9, Light 1.0, Moderate 1.05, Active 1.15."
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("• Calories = base goal × activity factor", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Protein ≈ 0.8g per lb of current weight", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Fat ≈ 30% of adjusted calories (9 cal/g)", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Carbs use remaining calories (4 cal/g)", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Activity factors: Sedentary 0.9, Light 1.0, Moderate 1.05, Active 1.15", style = MaterialTheme.typography.bodyLarge)
+                }
             }
         )
     }

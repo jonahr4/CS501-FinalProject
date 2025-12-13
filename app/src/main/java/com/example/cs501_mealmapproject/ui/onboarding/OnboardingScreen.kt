@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import com.example.cs501_mealmapproject.ui.theme.CS501MealMapProjectTheme
 
 // This function is composable for oboarding
-// TODO: Implement onboarding so Values inputted get saved to user
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
@@ -50,7 +49,7 @@ fun OnboardingScreen(
     val defaults = initialProfile ?: OnboardingProfile(
         calorieTarget = 2000,
         currentWeightLbs = 160f,
-        goalWeightLbs = 150f,
+        goalWeightLbs = 160f,
         activityLevel = ActivityLevel.Moderate
     )
     fun Float.asUserString(fallback: String): String {
@@ -60,10 +59,9 @@ fun OnboardingScreen(
 
     var calorieGoal by rememberSaveable(initialProfile) { mutableStateOf(defaults.calorieTarget.takeIf { it > 0 }?.toString() ?: "2000") }
     var currentWeight by rememberSaveable(initialProfile) { mutableStateOf(defaults.currentWeightLbs.asUserString("160")) }
-    var goalWeight by rememberSaveable(initialProfile) { mutableStateOf(defaults.goalWeightLbs.asUserString("150")) }
     var activityLevel by rememberSaveable(initialProfile) { mutableStateOf(defaults.activityLevel) }
 
-    val isValid = calorieGoal.isNotBlank() && currentWeight.isNotBlank() && goalWeight.isNotBlank()
+    val isValid = calorieGoal.isNotBlank() && currentWeight.isNotBlank()
     var showProfileMenu by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -103,10 +101,6 @@ fun OnboardingScreen(
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "This is currently a placeholer for the onboarding screen",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Text(
             text = "Personalize your plan to generate smarter recommendations and accurate nutrition targets.",
             style = MaterialTheme.typography.bodyMedium
         )
@@ -123,15 +117,6 @@ fun OnboardingScreen(
             value = currentWeight,
             onValueChange = { currentWeight = it.filter { char -> char.isDigit() || char == '.' } },
             label = { Text("Current weight (lbs)") },
-            keyboardOptions = KeyboardOptions.Default.copy( // Fully qualified name no longer needed
-                keyboardType = KeyboardType.Number
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = goalWeight,
-            onValueChange = { goalWeight = it.filter { char -> char.isDigit() || char == '.' } },
-            label = { Text("Goal weight (lbs)") },
             keyboardOptions = KeyboardOptions.Default.copy( // Fully qualified name no longer needed
                 keyboardType = KeyboardType.Number
             ),
@@ -164,7 +149,7 @@ fun OnboardingScreen(
                         OnboardingProfile(
                             calorieTarget = calorieGoal.toIntOrNull() ?: 0,
                             currentWeightLbs = currentWeight.toFloatOrNull() ?: 0f,
-                            goalWeightLbs = goalWeight.toFloatOrNull() ?: 0f,
+                            goalWeightLbs = currentWeight.toFloatOrNull() ?: 0f,
                             activityLevel = activityLevel
                         )
                     )
