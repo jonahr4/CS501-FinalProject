@@ -70,6 +70,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.data.nutrition.FoodItem
@@ -881,10 +882,10 @@ private fun FoodLogEntryCard(
 
 @Composable
 private fun getMealTypeColor(mealType: MealType) = when (mealType) {
-    MealType.BREAKFAST -> MaterialTheme.colorScheme.tertiaryContainer
-    MealType.LUNCH -> MaterialTheme.colorScheme.secondaryContainer
-    MealType.DINNER -> MaterialTheme.colorScheme.primaryContainer
-    MealType.SNACK -> MaterialTheme.colorScheme.surfaceVariant
+    MealType.BREAKFAST -> Color(0xFFE8F5E9) // Light mint green
+    MealType.LUNCH -> Color(0xFFC8E6C9)     // Soft green
+    MealType.DINNER -> Color(0xFFA5D6A7)    // Medium green
+    MealType.SNACK -> Color(0xFFDCEDC8)     // Lime green tint
 }
 
 // ============== New Enhanced Composables ==============
@@ -1243,14 +1244,6 @@ private fun QuickActionsCard(
                     Icon(Icons.Outlined.Bolt, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Quick Add", style = MaterialTheme.typography.labelMedium)
-                }
-                TextButton(
-                    onClick = onCopyYesterday,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Copy", style = MaterialTheme.typography.labelMedium)
                 }
             }
         }

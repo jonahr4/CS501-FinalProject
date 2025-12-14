@@ -67,8 +67,12 @@ fun FoodLogEntity.toFirestore(): FoodLogFirestore {
         protein = this.protein,
         carbs = this.carbs,
         fat = this.fat,
+        mealType = this.mealType,
+        servings = this.servings,
+        servingSize = this.servingSize,
         isFavorite = this.isFavorite,
         source = this.source,
+        fromRecipe = this.fromRecipe,
         timestamp = this.timestamp,
         lastUpdatedAt = System.currentTimeMillis(),
         deleted = false
@@ -83,8 +87,12 @@ fun FoodLogFirestore.toEntity(): FoodLogEntity {
         protein = this.protein,
         carbs = this.carbs,
         fat = this.fat,
+        mealType = this.mealType,
+        servings = this.servings,
+        servingSize = this.servingSize,
         isFavorite = this.isFavorite,
         source = this.source,
+        fromRecipe = this.fromRecipe,
         timestamp = this.timestamp
     )
 }

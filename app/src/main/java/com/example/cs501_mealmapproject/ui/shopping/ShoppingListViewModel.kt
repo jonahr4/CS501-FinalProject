@@ -439,15 +439,65 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
         val misc = mutableMapOf<String, MutableList<IngredientInfo>>() 
         
         // Backup keywords (still useful for fallback or offline)
-        val spiceKeywords = listOf("salt", "pepper", "cumin", "coriander", "turmeric", "paprika", "chili", "cinnamon", 
+        val spiceKeywords = listOf("salt", "pepper", "cumin", "coriander", "turmeric", "paprika", "chili", "chilli", "cinnamon", 
                                    "cardamom", "garam masala", "bay", "thyme", "oregano", "basil", "parsley", "seeds",
-                                   "nutmeg", "cloves", "ginger powder")
-        val proteinKeywords = listOf("chicken", "beef", "pork", "fish", "lamb", "shrimp", "tofu", "egg", "bacon", "ham", "turkey", "salmon", "tuna")
+                                   "nutmeg", "cloves", "ginger powder", "masala", "fenugreek", "methi", "curry powder",
+                                   "cayenne", "saffron", "allspice", "fennel", "mustard seed", "anise", "sumac",
+                                   "za'atar", "ras el hanout", "biryani", "tandoori", "tikka", "cajun", "jerk",
+                                   "five spice", "sesame", "poppy", "caraway", "dill seed", "celery seed", "khus")
+        val proteinKeywords = listOf("chicken", "beef", "pork", "fish", "lamb", "shrimp", "tofu", "egg", "bacon", "ham", 
+                                     "turkey", "salmon", "tuna", "prawn", "crab", "lobster", "duck", "goat", "mutton",
+                                     "sausage", "mince", "ground meat", "steak", "drumstick", "thigh", "breast", "wing",
+                                     "cashew", "almond", "walnut", "peanut", "pistachio", "nuts", "nut")
         val produceKeywords = listOf("onion", "garlic", "tomato", "pepper", "ginger", "vegetable", "carrot", "celery", 
-                                     "lettuce", "spinach", "potato", "lemon", "lime", "cucumber", "avocado", "mushroom", "bean", "corn")
-        val dairyKeywords = listOf("milk", "cream", "yogurt", "cheese", "butter", "ghee", "parmesan", "cheddar", "mozzarella")
+                                     "lettuce", "spinach", "potato", "lemon", "lime", "cucumber", "avocado", "mushroom", 
+                                     "bean", "corn", "mint", "cilantro", "coriander leaves", "parsley", "dill", "basil",
+                                     "green chilli", "green chili", "red chilli", "jalapeno", "serrano", "habanero",
+                                     "scallion", "spring onion", "green onion", "shallot", "leek", "chive",
+                                     "cabbage", "broccoli", "cauliflower", "zucchini", "eggplant", "aubergine",
+                                     "bell pepper", "capsicum", "kale", "chard", "arugula", "rocket", "bok choy",
+                                     "pea", "asparagus", "artichoke", "radish", "turnip", "beet", "squash", "pumpkin",
+                                     "apple", "banana", "orange", "mango", "berry", "grape", "melon", "pineapple", 
+                                     "leaves", "leaf", "fresh", "herb")
+        val dairyKeywords = listOf("milk", "cream", "yogurt", "yoghurt", "cheese", "butter", "ghee", "parmesan", 
+                                   "cheddar", "mozzarella", "paneer", "ricotta", "feta", "brie", "gouda",
+                                   "sour cream", "creme fraiche", "condensed milk", "evaporated milk", "whey")
         val pantryKeywords = listOf("rice", "flour", "oil", "sugar", "water", "stock", "sauce", "vinegar", "honey", 
-                                    "syrup", "mustard", "ketchup", "mayo", "bread", "pasta", "noodle", "yeast", "baking")
+                                    "syrup", "mustard", "ketchup", "mayo", "bread", "pasta", "noodle", "yeast", "baking",
+                                    "soy sauce", "fish sauce", "oyster sauce", "hoisin", "sriracha", "hot sauce",
+                                    "broth", "bouillon", "coconut milk", "tomato paste", "tomato sauce", "passata")
+
+        // Smart pattern detection for spices - looks for common patterns
+        fun isLikelySpice(ingredient: String): Boolean {
+            val spicePatterns = listOf(
+                "powder", "masala", "spice", "seasoning", "seed", "seeds",
+                "ground", "dried", "whole", "crushed", "flakes", "paste"
+            )
+            val spiceSuffixes = listOf("powder", "masala", "seeds", "seed")
+            
+            // Check if it ends with common spice suffixes
+            if (spiceSuffixes.any { ingredient.endsWith(it) }) return true
+            
+            // Check if it contains measurement + spice pattern (like "1 tsp cumin")
+            if (ingredient.contains("tsp") || ingredient.contains("tbsp") || ingredient.contains("teaspoon") || ingredient.contains("tablespoon")) {
+                if (spicePatterns.any { ingredient.contains(it) }) return true
+            }
+            
+            return false
+        }
+        
+        // Smart pattern detection for produce - looks for fresh/leaves patterns
+        fun isLikelyProduce(ingredient: String): Boolean {
+            val producePatterns = listOf(
+                "leaves", "leaf", "fresh", "chopped", "sliced", "diced",
+                "minced", "bunch", "sprigs", "stalks", "head of"
+            )
+            
+            // Fresh herbs and vegetables often have these patterns
+            if (producePatterns.any { ingredient.contains(it) }) return true
+            
+            return false
+        }
 
         recipeIngredients.forEach { (recipeName, ingredients) ->
             ingredients.forEach { (ingredient, instanceId) ->
@@ -513,8 +563,15 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
                             val base = extractIngredientBase(ingredient, pantryKeywords)
                             pantry.getOrPut(base) { mutableListOf() }.add(info)
                         }
+                        // 3. Smart pattern-based categorization for remaining items
+                        isLikelySpice(lowerIng) -> {
+                            spices.getOrPut(ingredient) { mutableListOf() }.add(info)
+                        }
+                        isLikelyProduce(lowerIng) -> {
+                            produce.getOrPut(ingredient) { mutableListOf() }.add(info)
+                        }
                         else -> {
-                            // 3. Finally, misc
+                            // 4. Finally, misc
                             misc.getOrPut(ingredient) { mutableListOf() }.add(info)
                         }
                     }

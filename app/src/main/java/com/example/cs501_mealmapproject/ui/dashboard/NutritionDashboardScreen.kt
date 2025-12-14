@@ -155,11 +155,19 @@ private fun NutritionDashboardContent(
             title = { Text("How goals are calculated", style = MaterialTheme.typography.titleLarge) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("• Calories = base goal × activity factor", style = MaterialTheme.typography.bodyLarge)
-                    Text("• Protein ≈ 0.8g per lb of current weight", style = MaterialTheme.typography.bodyLarge)
-                    Text("• Fat ≈ 30% of adjusted calories (9 cal/g)", style = MaterialTheme.typography.bodyLarge)
-                    Text("• Carbs use remaining calories (4 cal/g)", style = MaterialTheme.typography.bodyLarge)
-                    Text("• Activity factors: Sedentary 0.9, Light 1.0, Moderate 1.05, Active 1.15", style = MaterialTheme.typography.bodyLarge)
+                    Text("Your calorie goal is calculated from your weight goal:", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("1. We estimate your BMR (basal metabolic rate) from your current weight", style = MaterialTheme.typography.bodyMedium)
+                    Text("2. We multiply by your activity level to get your TDEE (daily energy needs)", style = MaterialTheme.typography.bodyMedium)
+                    Text("3. We adjust based on your weight goal:", style = MaterialTheme.typography.bodyMedium)
+                    Text("   • Lose weight: -500 cal/day (or -1000 for >20 lbs)", style = MaterialTheme.typography.bodySmall)
+                    Text("   • Gain weight: +300 cal/day (or +500 for >20 lbs)", style = MaterialTheme.typography.bodySmall)
+                    Text("   • Maintain: No adjustment", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Macros:", style = MaterialTheme.typography.bodyLarge)
+                    Text("• Protein: 0.8g per lb of body weight", style = MaterialTheme.typography.bodyMedium)
+                    Text("• Fat: 30% of daily calories", style = MaterialTheme.typography.bodyMedium)
+                    Text("• Carbs: Remaining calories", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         )

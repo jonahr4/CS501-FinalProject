@@ -1,5 +1,6 @@
 package com.example.cs501_mealmapproject.ui.shopping
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,18 +10,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Egg
+import androidx.compose.material.icons.outlined.Grass
+import androidx.compose.material.icons.outlined.Kitchen
+import androidx.compose.material.icons.outlined.LocalDrink
+import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.ShoppingBasket
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +50,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -134,29 +149,50 @@ private fun ShoppingListContent(
                 
                 itemsIndexed(sections) { sectionIndex, section ->
                     val expanded = remember { mutableStateOf(true) } // Default to expanded
+                    val sectionColor = getCategoryColor(section.title)
+                    val sectionIcon = getCategoryIcon(section.title)
                     
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                            containerColor = sectionColor.copy(alpha = 0.15f)
+                        ),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp),
+                                    .fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = section.title,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(sectionColor),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = sectionIcon,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = section.title,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = sectionColor
+                                    )
+                                }
                                 IconButton(
                                     onClick = { expanded.value = !expanded.value }
                                 ) {
@@ -209,7 +245,11 @@ private fun ShoppingListContent(
                                                     checked = item.checked,
                                                     onCheckedChange = { checked ->
                                                         onToggle(sectionIndex, itemIndex, checked)
-                                                    }
+                                                    },
+                                                    colors = CheckboxDefaults.colors(
+                                                        checkedColor = sectionColor,
+                                                        uncheckedColor = sectionColor.copy(alpha = 0.6f)
+                                                    )
                                                 )
                                             }
                                         }
@@ -229,11 +269,12 @@ private fun ShoppingListContent(
         // Floating Action Button
         FloatingActionButton(
             onClick = { showAddDialog = true },
+            containerColor = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(24.dp)
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Item")
+            Icon(Icons.Default.Add, contentDescription = "Add Item", tint = Color.White)
         }
     }
 
@@ -269,6 +310,27 @@ private fun ShoppingListContent(
             }
         )
     }
+}
+
+@Composable
+private fun getCategoryColor(category: String): Color = when {
+    category.contains("Protein", ignoreCase = true) || category.contains("Meat", ignoreCase = true) -> Color(0xFFE57373) // Soft red
+    category.contains("Produce", ignoreCase = true) || category.contains("Vegetable", ignoreCase = true) -> Color(0xFF66BB6A) // Green
+    category.contains("Dairy", ignoreCase = true) -> Color(0xFF64B5F6) // Light blue
+    category.contains("Grain", ignoreCase = true) || category.contains("Bread", ignoreCase = true) -> Color(0xFFFFB74D) // Orange/wheat
+    category.contains("Spice", ignoreCase = true) || category.contains("Seasoning", ignoreCase = true) -> Color(0xFFBA68C8) // Purple
+    category.contains("Other", ignoreCase = true) -> Color(0xFF90A4AE) // Grey blue
+    else -> Color(0xFF4CAF50) // Default green
+}
+
+@Composable
+private fun getCategoryIcon(category: String): ImageVector = when {
+    category.contains("Protein", ignoreCase = true) || category.contains("Meat", ignoreCase = true) -> Icons.Outlined.Restaurant
+    category.contains("Produce", ignoreCase = true) || category.contains("Vegetable", ignoreCase = true) -> Icons.Outlined.Grass
+    category.contains("Dairy", ignoreCase = true) -> Icons.Outlined.Egg
+    category.contains("Grain", ignoreCase = true) || category.contains("Bread", ignoreCase = true) -> Icons.Outlined.Kitchen
+    category.contains("Spice", ignoreCase = true) || category.contains("Seasoning", ignoreCase = true) -> Icons.Outlined.LocalDrink
+    else -> Icons.Outlined.ShoppingBasket
 }
 
 @Preview(showBackground = true)

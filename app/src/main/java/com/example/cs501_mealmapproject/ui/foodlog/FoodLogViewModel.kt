@@ -1198,6 +1198,14 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("hh:mm a"))
             
+            // Use the planned meal's date for the timestamp, not today's date
+            // This ensures the log appears on the correct date when logging future/past meals
+            val targetTimestamp = plannedMeal.date
+                .atTime(LocalTime.now())
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+            
             // Use pre-calculated per-serving values from PlannedMealForLog
             val entity = FoodLogEntity(
                 mealName = plannedMeal.recipeName,
@@ -1214,10 +1222,11 @@ class FoodLogViewModel(application: Application) : AndroidViewModel(application)
                 source = "From Meal Plan",
                 fromRecipe = plannedMeal.recipeName,
                 imageUrl = plannedMeal.imageUrl,
-                loggedTime = currentTime
+                loggedTime = currentTime,
+                timestamp = targetTimestamp
             )
             logAndSync(entity)
-            Log.d("FoodLogViewModel", "Logged planned meal: ${plannedMeal.recipeName} with ${(plannedMeal.estimatedCalories * servings).toInt()} cal")
+            Log.d("FoodLogViewModel", "Logged planned meal: ${plannedMeal.recipeName} on ${plannedMeal.date} with ${(plannedMeal.estimatedCalories * servings).toInt()} cal")
         }
     }
     
