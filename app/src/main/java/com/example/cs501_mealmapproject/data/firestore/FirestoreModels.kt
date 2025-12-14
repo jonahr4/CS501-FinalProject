@@ -38,8 +38,12 @@ data class FoodLogFirestore(
     @PropertyName("protein") val protein: Float = 0f,
     @PropertyName("carbs") val carbs: Float = 0f,
     @PropertyName("fat") val fat: Float = 0f,
+    @PropertyName("mealType") val mealType: String = "SNACK", // BREAKFAST, LUNCH, DINNER, SNACK
+    @PropertyName("servings") val servings: Float = 1f,
+    @PropertyName("servingSize") val servingSize: String = "1 serving",
     @PropertyName("isFavorite") val isFavorite: Boolean = false,
     @PropertyName("source") val source: String = "",
+    @PropertyName("fromRecipe") val fromRecipe: String? = null,
     @PropertyName("timestamp") val timestamp: Long = System.currentTimeMillis(),
     @PropertyName("lastUpdatedAt") val lastUpdatedAt: Long = System.currentTimeMillis(),
     @PropertyName("deleted") val deleted: Boolean = false // Soft delete for sync

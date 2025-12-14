@@ -66,4 +66,33 @@ interface FoodLogDao {
         LIMIT :limit
     """)
     fun getFrequentFoods(limit: Int = 20): Flow<List<FoodLogEntity>>
+    
+    // Delete food logs that match a specific recipe, meal type, and date range
+    // Used when removing a meal from the meal plan - also deletes the logged entries
+    @Query("""
+        DELETE FROM food_logs 
+        WHERE fromRecipe = :recipeName 
+        AND mealType = :mealType 
+        AND timestamp >= :startTime 
+        AND timestamp < :endTime
+    """)
+    suspend fun deleteByRecipeAndMealType(
+        recipeName: String, 
+        mealType: String, 
+        startTime: Long, 
+        endTime: Long
+    ): Int
+    
+    // Delete all food logs for a specific recipe on a specific date (any meal type)
+    @Query("""
+        DELETE FROM food_logs 
+        WHERE fromRecipe = :recipeName 
+        AND timestamp >= :startTime 
+        AND timestamp < :endTime
+    """)
+    suspend fun deleteByRecipeOnDate(
+        recipeName: String, 
+        startTime: Long, 
+        endTime: Long
+    ): Int
 }

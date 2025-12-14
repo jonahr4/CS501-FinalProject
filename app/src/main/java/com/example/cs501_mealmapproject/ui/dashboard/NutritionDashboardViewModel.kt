@@ -50,19 +50,40 @@ class NutritionDashboardViewModel(application: Application) : AndroidViewModel(a
                 val totalFat = todaysLogs.sumOf { it.fat.toDouble() }.toFloat()
 
                 val profile = currentProfile
-                val baseCalorieGoal = profile?.calorieTarget ?: 2000
                 val activityLevel = profile?.activityLevel ?: com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Moderate
-                val activityFactor = when (activityLevel) {
-                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Sedentary -> 0.9f
-                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Light -> 1.0f
-                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Moderate -> 1.05f
-                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Active -> 1.15f
+                
+                // Calculate calorie goal based on weight goal (same logic as OnboardingScreen)
+                val currentLbs = profile?.currentWeightLbs ?: 160f
+                val goalLbs = profile?.goalWeightLbs ?: currentLbs
+                
+                // More realistic BMR estimate: ~10-11 cal per lb body weight
+                val baseBMR = currentLbs * 10.5f
+                
+                // Activity multiplier for TDEE
+                val activityMultiplier = when (activityLevel) {
+                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Sedentary -> 1.2f
+                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Light -> 1.375f
+                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Moderate -> 1.55f
+                    com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Active -> 1.725f
                 }
-                val calorieGoal = (baseCalorieGoal * activityFactor).toInt()
+                
+                val tdee = baseBMR * activityMultiplier
+                
+                // Safe deficit/surplus: max 500-750 cal/day
+                val weightDiff = goalLbs - currentLbs
+                val calorieAdjustment = when {
+                    weightDiff < -30 -> -750   // Larger deficit for significant weight loss
+                    weightDiff < 0 -> -500     // Moderate deficit for weight loss
+                    weightDiff > 30 -> 500     // Moderate surplus for significant weight gain
+                    weightDiff > 0 -> 300      // Small surplus for lean gain
+                    else -> 0                  // Maintenance
+                }
+                
+                // Never go below 1500 calories
+                val calorieGoal = (tdee + calorieAdjustment).toInt().coerceIn(1500, 4000)
 
                 // Macro goals: protein scaled to weight (~0.8g per lb), fat 30% of calories, carbs fill the remainder
-                val weightLbs = profile?.currentWeightLbs ?: 160f
-                val proteinGoal = (weightLbs * 0.8f).coerceAtLeast(0f)
+                val proteinGoal = (currentLbs * 0.8f).coerceAtLeast(0f)
                 val fatGoal = (calorieGoal * 0.30f / 9f).toFloat()
                 val remainingCalories = (calorieGoal - (proteinGoal * 4f + fatGoal * 9f)).coerceAtLeast(0f)
                 val carbsGoal = (remainingCalories / 4f)
@@ -76,12 +97,12 @@ class NutritionDashboardViewModel(application: Application) : AndroidViewModel(a
                     carbsGoal = carbsGoal,
                     fatConsumed = totalFat,
                     fatGoal = fatGoal,
-                    currentWeight = profile?.currentWeightLbs ?: 0f,
-                    goalWeight = profile?.goalWeightLbs ?: 0f,
+                    currentWeight = currentLbs,
+                    goalWeight = goalLbs,
                     mealsLoggedToday = todaysLogs.size,
                     activityLevel = activityLevel,
-                    baseCalorieGoal = baseCalorieGoal,
-                    activityFactor = activityFactor
+                    tdee = tdee.toInt(),
+                    calorieAdjustment = calorieAdjustment
                 )
             }
         }
@@ -101,6 +122,6 @@ data class NutritionDashboardUiState(
     val goalWeight: Float = 0f,
     val mealsLoggedToday: Int = 0,
     val activityLevel: com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel = com.example.cs501_mealmapproject.ui.onboarding.ActivityLevel.Moderate,
-    val baseCalorieGoal: Int = 2000,
-    val activityFactor: Float = 1.0f
+    val tdee: Int = 2000,
+    val calorieAdjustment: Int = 0
 )

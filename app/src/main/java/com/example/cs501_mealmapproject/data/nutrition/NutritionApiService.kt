@@ -165,22 +165,67 @@ data class FoodItem(
         fun fromSearchResult(food: SearchResultFood): FoodItem {
             val nutrients = food.foodNutrients ?: emptyList()
             
-            // USDA nutrient IDs:
-            // 1008 = Energy (kcal)
-            // 1003 = Protein
-            // 1005 = Carbohydrates
-            // 1004 = Total Fat
-            // 1079 = Fiber
-            // 2000 = Sugars
-            // 1093 = Sodium
+            // USDA nutrient IDs and names (API returns different formats):
+            // 1008/208 = Energy (kcal)
+            // 1003/203 = Protein
+            // 1005/205 = Carbohydrates
+            // 1004/204 = Total Fat
+            // 1079/291 = Fiber
+            // 2000/269 = Sugars
+            // 1093/307 = Sodium
             
-            val calories = nutrients.find { it.nutrientNumber == "208" || it.nutrientId == 1008 }?.value?.toInt() ?: 0
-            val protein = nutrients.find { it.nutrientNumber == "203" || it.nutrientId == 1003 }?.value?.toFloat() ?: 0f
-            val carbs = nutrients.find { it.nutrientNumber == "205" || it.nutrientId == 1005 }?.value?.toFloat() ?: 0f
-            val fat = nutrients.find { it.nutrientNumber == "204" || it.nutrientId == 1004 }?.value?.toFloat() ?: 0f
-            val fiber = nutrients.find { it.nutrientNumber == "291" || it.nutrientId == 1079 }?.value?.toFloat() ?: 0f
-            val sugar = nutrients.find { it.nutrientNumber == "269" || it.nutrientId == 2000 }?.value?.toFloat() ?: 0f
-            val sodium = nutrients.find { it.nutrientNumber == "307" || it.nutrientId == 1093 }?.value?.toFloat() ?: 0f
+            // Helper function to find nutrient by multiple possible identifiers
+            fun findNutrient(vararg checks: (SearchFoodNutrient) -> Boolean): Double {
+                for (check in checks) {
+                    val found = nutrients.find(check)?.value
+                    if (found != null && found > 0) return found
+                }
+                return 0.0
+            }
+            
+            val calories = findNutrient(
+                { it.nutrientId == 1008 },
+                { it.nutrientNumber == "208" },
+                { it.nutrientName?.contains("Energy", ignoreCase = true) == true },
+                { it.nutrientName?.contains("Calories", ignoreCase = true) == true }
+            ).toInt()
+            
+            val protein = findNutrient(
+                { it.nutrientId == 1003 },
+                { it.nutrientNumber == "203" },
+                { it.nutrientName?.contains("Protein", ignoreCase = true) == true }
+            ).toFloat()
+            
+            val carbs = findNutrient(
+                { it.nutrientId == 1005 },
+                { it.nutrientNumber == "205" },
+                { it.nutrientName?.contains("Carbohydrate", ignoreCase = true) == true }
+            ).toFloat()
+            
+            val fat = findNutrient(
+                { it.nutrientId == 1004 },
+                { it.nutrientNumber == "204" },
+                { it.nutrientName?.contains("Total lipid", ignoreCase = true) == true },
+                { it.nutrientName?.equals("Fat", ignoreCase = true) == true }
+            ).toFloat()
+            
+            val fiber = findNutrient(
+                { it.nutrientId == 1079 },
+                { it.nutrientNumber == "291" },
+                { it.nutrientName?.contains("Fiber", ignoreCase = true) == true }
+            ).toFloat()
+            
+            val sugar = findNutrient(
+                { it.nutrientId == 2000 },
+                { it.nutrientNumber == "269" },
+                { it.nutrientName?.contains("Sugar", ignoreCase = true) == true }
+            ).toFloat()
+            
+            val sodium = findNutrient(
+                { it.nutrientId == 1093 },
+                { it.nutrientNumber == "307" },
+                { it.nutrientName?.contains("Sodium", ignoreCase = true) == true }
+            ).toFloat()
             
             val brand = food.brandOwner ?: food.brandName
             
