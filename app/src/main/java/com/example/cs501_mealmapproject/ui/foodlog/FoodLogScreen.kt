@@ -24,6 +24,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -57,6 +60,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +75,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.cs501_mealmapproject.data.nutrition.FoodItem
 import com.example.cs501_mealmapproject.ui.scanner.BarcodeScannerView
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun FoodLogScreen(
@@ -80,11 +86,15 @@ fun FoodLogScreen(
 ) {
     val uiState by foodLogViewModel.uiState.collectAsState()
     
-    // Set current user and refresh planned meals when screen loads
+    // Set current user only when it changes - use Unit to run only once
     LaunchedEffect(currentUserId) {
         if (currentUserId.isNotEmpty()) {
             foodLogViewModel.setCurrentUser(currentUserId)
         }
+    }
+    
+    // Refresh planned meals only once when screen first appears
+    LaunchedEffect(Unit) {
         foodLogViewModel.refreshPlannedMeals()
     }
     
@@ -146,6 +156,17 @@ fun FoodLogScreen(
                 foodLogViewModel.updateLogServings(entry.id, newServings, entry)
                 showEditDialog = null
             },
+            onUpdateWithRecalculated = { servings, perServingCal, perServingProtein, perServingCarbs, perServingFat ->
+                foodLogViewModel.updateLogWithRecalculatedNutrition(
+                    entry.id, 
+                    servings, 
+                    perServingCal, 
+                    perServingProtein, 
+                    perServingCarbs, 
+                    perServingFat
+                )
+                showEditDialog = null
+            },
             onUpdateMealType = { newMealType ->
                 foodLogViewModel.updateLogMealType(entry.id, newMealType)
                 showEditDialog = null
@@ -153,7 +174,8 @@ fun FoodLogScreen(
             onToggleFavorite = {
                 foodLogViewModel.toggleFavorite(entry.id, !entry.isFavorite)
                 showEditDialog = null
-            }
+            },
+            viewModel = foodLogViewModel
         )
     }
 
@@ -251,6 +273,10 @@ fun FoodLogScreen(
         EnhancedFoodLogContent(
             modifier = modifier,
             uiState = uiState,
+            selectedDate = uiState.selectedDate,
+            onPreviousDay = { foodLogViewModel.goToPreviousDay() },
+            onNextDay = { foodLogViewModel.goToNextDay() },
+            onGoToToday = { foodLogViewModel.goToToday() },
             onScanBarcode = { mealType ->
                 selectedMealType = mealType
                 showScanner = true
@@ -868,6 +894,10 @@ private fun getMealTypeColor(mealType: MealType) = when (mealType) {
 private fun EnhancedFoodLogContent(
     modifier: Modifier = Modifier,
     uiState: FoodLogUiState,
+    selectedDate: LocalDate,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
+    onGoToToday: () -> Unit,
     onScanBarcode: (MealType) -> Unit,
     onSearchFood: () -> Unit,
     onAddManual: () -> Unit,
@@ -881,6 +911,8 @@ private fun EnhancedFoodLogContent(
     onBuildMeal: () -> Unit
 ) {
     var expandedMealSections by remember { mutableStateOf(setOf(MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER, MealType.SNACK)) }
+    val today = LocalDate.now()
+    val isToday = selectedDate == today
     
     LazyColumn(
         modifier = modifier
@@ -888,9 +920,20 @@ private fun EnhancedFoodLogContent(
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Date navigation header
+        item {
+            DateNavigationHeader(
+                selectedDate = selectedDate,
+                isToday = isToday,
+                onPreviousDay = onPreviousDay,
+                onNextDay = onNextDay,
+                onGoToToday = onGoToToday
+            )
+        }
+        
         // Daily summary card
         item {
-            DailySummaryCard(summary = uiState.todaysSummary)
+            DailySummaryCard(summary = uiState.todaysSummary, isToday = isToday, selectedDate = selectedDate)
         }
         
         // Quick actions
@@ -971,7 +1014,96 @@ private fun EnhancedFoodLogContent(
 }
 
 @Composable
-private fun DailySummaryCard(summary: NutritionSummary) {
+private fun DateNavigationHeader(
+    selectedDate: LocalDate,
+    isToday: Boolean,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
+    onGoToToday: () -> Unit
+) {
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("EEE, MMM d") }
+    
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onPreviousDay) {
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = "Previous day",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = when {
+                        isToday -> "Today"
+                        selectedDate == LocalDate.now().minusDays(1) -> "Yesterday"
+                        selectedDate == LocalDate.now().plusDays(1) -> "Tomorrow"
+                        else -> selectedDate.format(dateFormatter)
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                if (!isToday) {
+                    Text(
+                        text = selectedDate.format(dateFormatter),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            if (isToday) {
+                // Placeholder to balance layout
+                IconButton(onClick = onNextDay) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Next day",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Row {
+                    IconButton(onClick = onGoToToday) {
+                        Icon(
+                            imageVector = Icons.Default.Today,
+                            contentDescription = "Go to today",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = onNextDay) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Next day",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailySummaryCard(
+    summary: NutritionSummary,
+    isToday: Boolean = true,
+    selectedDate: LocalDate = LocalDate.now()
+) {
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("MMM d") }
+    
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -983,7 +1115,7 @@ private fun DailySummaryCard(summary: NutritionSummary) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Today's Nutrition",
+                text = if (isToday) "Today's Nutrition" else "${selectedDate.format(dateFormatter)} Nutrition",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -1332,52 +1464,234 @@ private fun EditFoodLogDialog(
     entry: FoodLogEntry,
     onDismiss: () -> Unit,
     onUpdateServings: (Float) -> Unit,
+    onUpdateWithRecalculated: (Float, Int, Float, Float, Float) -> Unit,  // servings, cal, protein, carbs, fat (per serving)
     onUpdateMealType: (MealType) -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    viewModel: FoodLogViewModel = viewModel()
 ) {
-    var servings by remember { mutableFloatStateOf(entry.servings) }
+    var servingsText by remember { mutableStateOf(entry.servings.toString()) }
     var selectedMealType by remember { mutableStateOf(entry.mealType) }
+    var showIngredients by remember { mutableStateOf(false) }
+    var ingredientBreakdown by remember { mutableStateOf<List<IngredientNutritionBreakdown>>(emptyList()) }
+    var isLoadingIngredients by remember { mutableStateOf(false) }
+    var recipeServings by remember { mutableIntStateOf(4) } // Default to 4 servings
+    
+    // Parse servings from text
+    val servings = servingsText.toFloatOrNull() ?: entry.servings
+    
+    // Auto-load ingredients for recipes to get correct nutrition values
+    LaunchedEffect(entry.fromRecipe) {
+        if (entry.fromRecipe != null && ingredientBreakdown.isEmpty()) {
+            isLoadingIngredients = true
+            // Get recipe cache to find out how many servings the full recipe makes
+            val recipeCache = viewModel.getRecipeCache(entry.fromRecipe)
+            recipeServings = recipeCache?.estimatedServings ?: 4
+            ingredientBreakdown = viewModel.getIngredientBreakdown(entry.fromRecipe)
+            isLoadingIngredients = false
+        }
+    }
+    
+    // Use recalculated nutrition if we have ingredient breakdown, otherwise use original entry values
+    // This fixes the issue where cached nutrition was wrong but ingredient breakdown is correct
+    val baseCalories = if (ingredientBreakdown.isNotEmpty()) {
+        // Full recipe calories from ingredients, divided by recipe servings = per-serving base
+        ingredientBreakdown.sumOf { it.calories } / recipeServings
+    } else {
+        entry.calories / entry.servings.toInt().coerceAtLeast(1)
+    }
+    val baseProtein = if (ingredientBreakdown.isNotEmpty()) {
+        ingredientBreakdown.sumOf { it.protein.toDouble() }.toFloat() / recipeServings
+    } else {
+        entry.protein / entry.servings
+    }
+    val baseCarbs = if (ingredientBreakdown.isNotEmpty()) {
+        ingredientBreakdown.sumOf { it.carbs.toDouble() }.toFloat() / recipeServings
+    } else {
+        entry.carbs / entry.servings
+    }
+    val baseFat = if (ingredientBreakdown.isNotEmpty()) {
+        ingredientBreakdown.sumOf { it.fat.toDouble() }.toFloat() / recipeServings
+    } else {
+        entry.fat / entry.servings
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Entry") },
+        title = { Text("Meal Details") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text(
                     text = entry.meal,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 
+                // Show source
+                if (entry.fromRecipe != null) {
+                    Text(
+                        text = "From: ${entry.source}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
                 HorizontalDivider()
                 
-                // Servings
+                // Servings with editable text field
                 Text("Servings", style = MaterialTheme.typography.labelLarge)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    IconButton(onClick = { if (servings > 0.5f) servings -= 0.5f }) {
+                    IconButton(onClick = { 
+                        val current = servingsText.toFloatOrNull() ?: 1f
+                        if (current > 0.25f) {
+                            servingsText = "%.2f".format(current - 0.25f).trimEnd('0').trimEnd('.')
+                        }
+                    }) {
                         Icon(Icons.Default.Remove, contentDescription = "Decrease")
                     }
-                    Text(
-                        text = "%.1f".format(servings),
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.width(60.dp),
-                        textAlign = TextAlign.Center
+                    OutlinedTextField(
+                        value = servingsText,
+                        onValueChange = { newValue ->
+                            // Allow only valid decimal input
+                            if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                servingsText = newValue
+                            }
+                        },
+                        modifier = Modifier.width(80.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.titleMedium.copy(textAlign = TextAlign.Center)
                     )
-                    IconButton(onClick = { servings += 0.5f }) {
+                    IconButton(onClick = { 
+                        val current = servingsText.toFloatOrNull() ?: 1f
+                        servingsText = "%.2f".format(current + 0.25f).trimEnd('0').trimEnd('.')
+                    }) {
                         Icon(Icons.Default.Add, contentDescription = "Increase")
                     }
                 }
                 
-                // Calculated calories for new serving
-                val ratio = servings / entry.servings
-                Text(
-                    text = "Calories: ${(entry.calories * ratio).toInt()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                // Calculated nutrition for selected servings (uses recalculated values if available)
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Nutrition (${servings}× serving)",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = "${(baseCalories * servings).toInt()} cal",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "P: ${(baseProtein * servings).toInt()}g • C: ${(baseCarbs * servings).toInt()}g • F: ${(baseFat * servings).toInt()}g",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                
+                // Ingredient breakdown (only for meals from recipes)
+                if (entry.fromRecipe != null) {
+                    HorizontalDivider()
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showIngredients = !showIngredients },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Ingredient Breakdown",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                        Icon(
+                            imageVector = if (showIngredients) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (showIngredients) "Collapse" else "Expand"
+                        )
+                    }
+                    
+                    AnimatedVisibility(visible = showIngredients) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (isLoadingIngredients) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Loading ingredients...")
+                                }
+                            } else if (ingredientBreakdown.isEmpty()) {
+                                Text(
+                                    text = "No ingredient data available",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                // Calculate the multiplier: servings selected / recipe total servings
+                                val perServingMultiplier = servings / recipeServings
+                                
+                                Text(
+                                    text = "Per ${"%.1f".format(servings)} serving (recipe makes $recipeServings):",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                
+                                ingredientBreakdown.forEach { ingredient ->
+                                    IngredientBreakdownItem(
+                                        ingredient = ingredient,
+                                        servingMultiplier = perServingMultiplier
+                                    )
+                                }
+                                
+                                // Total row - per serving
+                                HorizontalDivider()
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Your serving total",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "${(ingredientBreakdown.sumOf { it.calories } * perServingMultiplier).toInt()} cal",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                
+                                // Full recipe total (smaller, secondary info)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Full recipe ($recipeServings servings)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "${ingredientBreakdown.sumOf { it.calories }} cal",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
                 
                 HorizontalDivider()
                 
@@ -1416,7 +1730,27 @@ private fun EditFoodLogDialog(
         },
         confirmButton = {
             TextButton(onClick = { 
-                if (servings != entry.servings) onUpdateServings(servings)
+                val newServings = servingsText.toFloatOrNull() ?: entry.servings
+                
+                // If we have recalculated nutrition from ingredients, use that
+                if (ingredientBreakdown.isNotEmpty()) {
+                    val totalCalories = ingredientBreakdown.sumOf { it.calories }
+                    val totalProtein = ingredientBreakdown.sumOf { it.protein.toDouble() }.toFloat()
+                    val totalCarbs = ingredientBreakdown.sumOf { it.carbs.toDouble() }.toFloat()
+                    val totalFat = ingredientBreakdown.sumOf { it.fat.toDouble() }.toFloat()
+                    
+                    // Calculate per-serving values
+                    val perServingCal = totalCalories / recipeServings
+                    val perServingProtein = totalProtein / recipeServings
+                    val perServingCarbs = totalCarbs / recipeServings
+                    val perServingFat = totalFat / recipeServings
+                    
+                    onUpdateWithRecalculated(newServings, perServingCal, perServingProtein, perServingCarbs, perServingFat)
+                } else if (newServings != entry.servings && newServings > 0) {
+                    // No recalculated data, just update servings
+                    onUpdateServings(newServings)
+                }
+                
                 if (selectedMealType != entry.mealType) onUpdateMealType(selectedMealType)
                 onDismiss()
             }) {
@@ -1427,6 +1761,76 @@ private fun EditFoodLogDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+@Composable
+private fun IngredientBreakdownItem(
+    ingredient: IngredientNutritionBreakdown,
+    servingMultiplier: Float = 1f
+) {
+    // Calculate per-serving values
+    val perServingCalories = (ingredient.calories * servingMultiplier).toInt()
+    val perServingProtein = (ingredient.protein * servingMultiplier)
+    val perServingCarbs = (ingredient.carbs * servingMultiplier)
+    val perServingFat = (ingredient.fat * servingMultiplier)
+    
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = ingredient.ingredientName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "$perServingCalories cal",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Show original measure with per-serving note if scaled
+                val measureText = if (servingMultiplier != 1f && ingredient.measure.isNotBlank()) {
+                    "${ingredient.measure} × ${"%.2f".format(servingMultiplier).trimEnd('0').trimEnd('.')}"
+                } else {
+                    ingredient.measure.ifBlank { "1 serving" }
+                }
+                Text(
+                    text = measureText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "(${ingredient.source})",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (ingredient.source == "USDA") 
+                        MaterialTheme.colorScheme.primary 
+                    else 
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = "P: ${perServingProtein.toInt()}g • C: ${perServingCarbs.toInt()}g • F: ${perServingFat.toInt()}g",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

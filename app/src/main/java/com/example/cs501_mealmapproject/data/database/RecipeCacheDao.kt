@@ -44,6 +44,21 @@ interface RecipeCacheDao {
         sodium: Float
     )
     
+    @Query("UPDATE recipe_cache SET isNutritionCalculated = 0 WHERE recipeName = :name")
+    suspend fun resetNutritionStatus(name: String)
+    
+    @Query("UPDATE recipe_cache SET isNutritionCalculated = 0 WHERE totalCalories = 0")
+    suspend fun resetAllZeroCalorieRecipes()
+    
+    @Query("DELETE FROM recipe_cache WHERE recipeName = :name")
+    suspend fun deleteRecipe(name: String)
+    
+    @Query("DELETE FROM recipe_cache")
+    suspend fun deleteAllRecipes()
+    
+    @Query("DELETE FROM recipe_cache WHERE totalCalories > :maxCalories")
+    suspend fun deleteRecipesWithHighCalories(maxCalories: Int)
+    
     @Query("DELETE FROM recipe_cache WHERE cachedAt < :beforeTime")
     suspend fun deleteOldCache(beforeTime: Long)
     

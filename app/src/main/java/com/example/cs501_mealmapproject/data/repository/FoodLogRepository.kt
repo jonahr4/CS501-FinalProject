@@ -210,4 +210,72 @@ class FoodLogRepository(context: Context) {
             Result.failure(e)
         }
     }
+    
+    /**
+     * Delete food logs for a specific recipe on a specific date and meal type.
+     * Used when a meal is removed from the meal plan - automatically removes the logged entries too.
+     * 
+     * @param userId The user ID for Firestore sync
+     * @param recipeName The recipe name to match (stored in fromRecipe field)
+     * @param mealType The meal type to match (BREAKFAST, LUNCH, DINNER, SNACK)
+     * @param startOfDay The start timestamp of the day (midnight)
+     * @param endOfDay The end timestamp of the day (next midnight)
+     * @return Result indicating success or failure
+     */
+    suspend fun deleteFoodLogsByRecipe(
+        userId: String,
+        recipeName: String,
+        mealType: String,
+        startOfDay: Long,
+        endOfDay: Long
+    ): Result<Int> {
+        return try {
+            // Delete from Room
+            val deletedCount = foodLogDao.deleteByRecipeAndMealType(
+                recipeName = recipeName,
+                mealType = mealType,
+                startTime = startOfDay,
+                endTime = endOfDay
+            )
+            Log.d(TAG, "Deleted $deletedCount food logs from Room for recipe '$recipeName' on $mealType")
+            
+            // Also mark as deleted in Firestore (soft delete)
+            // Note: This is a best-effort sync - Firestore deletion happens in background
+            if (deletedCount > 0) {
+                withContext(Dispatchers.IO) {
+                    try {
+                        // Query matching documents in Firestore
+                        val matchingDocs = firestore.collection(COLLECTION_USERS)
+                            .document(userId)
+                            .collection(COLLECTION_FOOD_LOGS)
+                            .whereEqualTo("fromRecipe", recipeName)
+                            .whereEqualTo("mealType", mealType)
+                            .whereGreaterThanOrEqualTo("timestamp", startOfDay)
+                            .whereLessThan("timestamp", endOfDay)
+                            .get()
+                            .await()
+                        
+                        // Soft delete each matching document
+                        matchingDocs.documents.forEach { doc ->
+                            doc.reference.update(
+                                mapOf(
+                                    "deleted" to true,
+                                    "lastUpdatedAt" to System.currentTimeMillis()
+                                )
+                            )
+                        }
+                        Log.d(TAG, "Soft deleted ${matchingDocs.size()} food logs in Firestore")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to delete food logs from Firestore", e)
+                        // Don't fail the operation - Room deletion was successful
+                    }
+                }
+            }
+            
+            Result.success(deletedCount)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to delete food logs by recipe", e)
+            Result.failure(e)
+        }
+    }
 }

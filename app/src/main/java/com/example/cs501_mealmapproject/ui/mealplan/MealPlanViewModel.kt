@@ -8,8 +8,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cs501_mealmapproject.data.auth.AuthRepository
 import com.example.cs501_mealmapproject.data.database.MealPlanEntity
+import com.example.cs501_mealmapproject.data.repository.FoodLogRepository
 import com.example.cs501_mealmapproject.data.repository.MealPlanRepository
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +23,7 @@ import kotlinx.coroutines.launch
 class MealPlanViewModel(application: Application) : AndroidViewModel(application) {
 
     private val mealPlanRepository = MealPlanRepository(application)
+    private val foodLogRepository = FoodLogRepository(application)
     private val authRepository = AuthRepository(application)
     private val appContext = application.applicationContext
     private var currentUserId: String? = null
@@ -107,6 +111,13 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun removeMeal(date: LocalDate, mealType: String) {
+        // First, capture the recipe name before we clear it
+        val recipeName = _uiState.value.plan
+            .find { it.date == date }
+            ?.meals?.find { it.mealType == mealType }
+            ?.recipeName
+        
+        // Update the UI state to clear the meal slot
         _uiState.update { state ->
             val updatedPlan = state.plan.map { day ->
                 if (day.date == date) {
@@ -125,7 +136,41 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             val userId = authRepository.currentUser?.uid ?: return@launch
+            
+            // Delete the meal plan entry
             mealPlanRepository.deleteMealPlan(userId, date.toString(), mealType)
+            
+            // Also delete any food logs that were logged from this meal plan entry
+            if (recipeName != null && recipeName != "Tap to add a recipe") {
+                // Calculate the start and end timestamps for the date
+                val startOfDay = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val endOfDay = date.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                
+                // Map meal type to the format stored in food logs
+                val foodLogMealType = when (mealType.uppercase()) {
+                    "BREAKFAST" -> "BREAKFAST"
+                    "LUNCH" -> "LUNCH"
+                    "DINNER" -> "DINNER"
+                    "SNACK" -> "SNACK"
+                    else -> mealType.uppercase()
+                }
+                
+                val result = foodLogRepository.deleteFoodLogsByRecipe(
+                    userId = userId,
+                    recipeName = recipeName,
+                    mealType = foodLogMealType,
+                    startOfDay = startOfDay,
+                    endOfDay = endOfDay
+                )
+                
+                result.onSuccess { count ->
+                    if (count > 0) {
+                        Log.d("MealPlanViewModel", "Also deleted $count logged entries for '$recipeName' on $date")
+                    }
+                }.onFailure { e ->
+                    Log.e("MealPlanViewModel", "Failed to delete logged entries", e)
+                }
+            }
         }
     }
 
