@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -25,6 +26,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -124,14 +128,10 @@ fun RecipeDiscoveryScreen(
                     modifier = Modifier,
                     recipes = uiState.recipes,
                     query = uiState.query,
+                    hasSearched = uiState.hasSearched,
                     onQueryChange = viewModel::onQueryChange,
                     onSearch = viewModel::performSearch,
-                    onRecipeClick = { recipe -> selectedRecipe = recipe },
-                    onQuickTest = {
-                        // quick debug action: set query to 'chicken' and run search
-                        viewModel.onQueryChange("chicken")
-                        viewModel.performSearch()
-                    }
+                    onRecipeClick = { recipe -> selectedRecipe = recipe }
                 )
             }
         }
@@ -202,10 +202,10 @@ private fun RecipeDiscoveryContent(
     modifier: Modifier = Modifier,
     recipes: List<RecipeSummary>,
     query: String,
+    hasSearched: Boolean,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
-    onRecipeClick: (RecipeSummary) -> Unit,
-    onQuickTest: () -> Unit = {}
+    onRecipeClick: (RecipeSummary) -> Unit
 ) {
 
     Column(
@@ -214,39 +214,134 @@ private fun RecipeDiscoveryContent(
             .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Discover recipes",
-            style = MaterialTheme.typography.titleLarge
-        )
-        Text(
-            text = "Search TheMealDB catalog and tap a card to see full directions.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            label = { Text("Search by recipe name") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onSearch) {
-                Text("Search")
+        // Header with icon
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.MenuBook,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
             }
-            Button(onClick = onQuickTest) {
-                Text("Quick: chicken")
+            Column {
+                Text(
+                    text = "Discover recipes",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = "Search TheMealDB catalog",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
+        
+        // Search bar with button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                placeholder = { Text("Search recipes...") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.weight(1f)
+            )
+            Button(
+                onClick = onSearch,
+                enabled = query.isNotBlank()
+            ) {
+                Text("Search")
+            }
+        }
+        
+        // Results or empty state
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (recipes.isEmpty()) {
+            if (!hasSearched) {
+                // Initial state - show tips
                 item {
-                    Text(
-                        text = "No meals found. Try another search.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Restaurant,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                text = "Search for a recipe",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = "Try searching for dishes like \"pasta\", \"salad\", or \"beef\"",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            } else if (recipes.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "No recipes found",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = "Try a different search term",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
             items(recipes) { recipe ->
@@ -265,38 +360,42 @@ private fun RecipeCard(
     Card(
         onClick = { onClick(recipe) },
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             RecipeThumbnail(
                 imageUrl = recipe.imageUrl,
                 contentDescription = recipe.title,
-                sizeDp = 72.dp
+                sizeDp = 80.dp
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = recipe.title,
                     style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = recipe.subtitle,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "Tap to open details, add to planner, or export ingredients to the shopping list.",
-                    style = MaterialTheme.typography.bodySmall
+                    text = "Tap for details & to add to planner",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -311,7 +410,7 @@ private fun RecipeThumbnail(
 ) {
     val modifier = Modifier
         .size(sizeDp)
-        .clip(CircleShape)
+        .clip(RoundedCornerShape(12.dp))
 
     if (imageUrl.isNullOrBlank()) {
         val initial = contentDescription.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
@@ -555,6 +654,7 @@ private fun RecipeDiscoveryScreenPreview() {
         RecipeDiscoveryContent(
             recipes = previewRecipes,
             query = "salmon",
+            hasSearched = true,
             onQueryChange = {},
             onSearch = {},
             onRecipeClick = {}

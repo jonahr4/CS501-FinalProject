@@ -131,12 +131,12 @@ private fun MealPlanContent(
                                 }
                             }
                         }
-                        
+
                         dailyPlan.meals.forEach { mealSlot ->
                             val isPlaceholder = mealSlot.recipeName == "Tap to add a recipe"
                             val mealColor = getMealColor(mealSlot.mealType)
                             val mealIcon = getMealIcon(mealSlot.mealType)
-                            
+
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -181,14 +181,14 @@ private fun MealPlanContent(
                                             Text(
                                                 text = mealSlot.recipeName,
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                color = if (isPlaceholder) 
+                                                color = if (isPlaceholder)
                                                     getPlaceholderColor(mealSlot.mealType) // Darker than icon
-                                                else 
+                                                else
                                                     MaterialTheme.colorScheme.onSurface
                                             )
                                         }
                                     }
-                                    
+
                                     if (!isPlaceholder) {
                                         IconButton(onClick = { pendingDeletion = dailyPlan.date to mealSlot.mealType }) {
                                             Icon(

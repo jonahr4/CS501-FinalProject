@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RewriteQueriesToDropUnusedColumns
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -58,6 +59,7 @@ interface FoodLogDao {
     suspend fun updateNotes(id: Long, notes: String)
     
     // Get frequently logged foods (by count)
+    @RewriteQueriesToDropUnusedColumns
     @Query("""
         SELECT *, COUNT(*) as logCount 
         FROM food_logs 
