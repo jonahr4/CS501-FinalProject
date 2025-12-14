@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val DEFAULT_QUERY = "chicken"
 private const val MAX_RESULTS = 5
 
 class RecipeDiscoveryViewModel(
@@ -18,16 +17,13 @@ class RecipeDiscoveryViewModel(
     private val _uiState = MutableStateFlow(RecipeDiscoveryUiState())
     val uiState: StateFlow<RecipeDiscoveryUiState> = _uiState.asStateFlow()
 
-    init {
-        performSearch()
-    }
-
     fun onQueryChange(value: String) {
         _uiState.update { it.copy(query = value) }
     }
 
     fun performSearch() {
-        val sanitizedQuery = _uiState.value.query.trim().ifEmpty { DEFAULT_QUERY }
+        val sanitizedQuery = _uiState.value.query.trim()
+        if (sanitizedQuery.isEmpty()) return
         fetchRecipes(sanitizedQuery)
     }
 
@@ -41,6 +37,7 @@ class RecipeDiscoveryViewModel(
                     it.copy(
                         recipes = recipes,
                         isLoading = false,
+                        hasSearched = true,
                         errorMessage = null
                     )
                 }
@@ -48,6 +45,7 @@ class RecipeDiscoveryViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        hasSearched = true,
                         errorMessage = error.message ?: "Unable to load recipes"
                     )
                 }
@@ -58,8 +56,9 @@ class RecipeDiscoveryViewModel(
 
 data class RecipeDiscoveryUiState(
     val recipes: List<RecipeSummary> = emptyList(),
-    val query: String = DEFAULT_QUERY,
-    val isLoading: Boolean = true,
+    val query: String = "",
+    val isLoading: Boolean = false,
+    val hasSearched: Boolean = false,
     val errorMessage: String? = null
 )
 
