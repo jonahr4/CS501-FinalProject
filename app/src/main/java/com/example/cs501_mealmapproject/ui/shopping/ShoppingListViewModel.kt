@@ -449,6 +449,7 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
                                      "turkey", "salmon", "tuna", "prawn", "crab", "lobster", "duck", "goat", "mutton",
                                      "sausage", "mince", "ground meat", "steak", "drumstick", "thigh", "breast", "wing",
                                      "cashew", "almond", "walnut", "peanut", "pistachio", "nuts", "nut")
+            val proteinExclusion = listOf("stock", "broth", "sauce", "milk", "paste", "bouillon", "gravy")
         val produceKeywords = listOf("onion", "garlic", "tomato", "pepper", "ginger", "vegetable", "carrot", "celery", 
                                      "lettuce", "spinach", "potato", "lemon", "lime", "cucumber", "avocado", "mushroom", 
                                      "bean", "corn", "mint", "cilantro", "coriander leaves", "parsley", "dill", "basil",
@@ -543,7 +544,7 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
                 // 2. Fallback to Keywords if API didn't catch it
                 if (!categorized) {
                     when {
-                        proteinKeywords.any { lowerIng.contains(it) } -> {
+                        proteinKeywords.any { lowerIng.contains(it) } && proteinExclusion.none { lowerIng.contains(it) } -> {
                             val base = extractIngredientBase(ingredient, proteinKeywords)
                             proteins.getOrPut(base) { mutableListOf() }.add(info)
                         }
