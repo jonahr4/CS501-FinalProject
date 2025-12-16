@@ -84,8 +84,8 @@ The app should build successfully and launch into the onboarding screen.
 ## Architecture Overview
 
 ### MVVM Architecture
-- ![Project Architecture](assets/Project%20Architecture.png) — MVVM with Compose UI, ViewModels using StateFlow, repositories for Room/Retrofit/Firebase
-- ![User Flow](assets/User%20FLow.png) — Onboarding → planning → recipes → logging → dashboard/shopping
+- ![Project Architecture](Assets/Project%20Architecture.png) — MVVM with Compose UI, ViewModels using StateFlow, repositories for Room/Retrofit/Firebase
+- ![User Flow](Assets/User%20FLow.png) — Onboarding → planning → recipes → logging → dashboard/shopping
 
 ## Nutrition Calculation Details
 
