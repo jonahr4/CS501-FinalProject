@@ -2,123 +2,17 @@
 **Smart Meal Planning & Nutrition Tracker**
 _CS501 Final Project – Jonah Rothman & Abidul Islam_
 
----
-### Update - 12/2
----
+### Demo Video
+<a href="https://www.youtube.com/watch?v=SQnV2oUZETA">
+  <img src="https://img.youtube.com/vi/SQnV2oUZETA/hqdefault.jpg" alt="MealMap demo video" width="480" />
+</a>
 
-## Feature Status
-
-### ✅ Fully Implemented Features
-
-| Feature | Implementation Details | Technologies |
-|---------|----------------------|--------------|
-| **Recipe Discovery** | Search and browse recipes from TheMealDB API with detailed ingredient lists and instructions | Retrofit, Moshi, Coil |
-| **Meal Planning Calendar** | Weekly meal planner with SharedPreferences persistence. Assign recipes to specific days/meals | SharedPreferences, StateFlow |
-| **Barcode Food Logging** | Scan product barcodes using device camera, fetch nutrition data from OpenFoodFacts API | CameraX, ML Kit Barcode Scanning, Retrofit |
-| **Manual Food Logging** | Input food manually with custom nutrition values (calories, protein, carbs, fat) via dialog form | Jetpack Compose Dialogs, Room Database |
-| **Shopping List Generation** | Auto-generated from weekly meal plan recipes with smart ingredient grouping and duplicate detection | ViewModel, StateFlow |
-| **Nutrition Tracking Dashboard** | Real-time dashboard showing daily calorie and macro progress with visual progress bars | Room Database, Flow, Jetpack Compose |
-| **User Onboarding** | Collect user goals (calorie target, current/goal weight, activity level) to personalize experience | SharedPreferences via SessionViewModel |
-
-### Future Features
-
-| Feature | Status | Reason |
-|---------|--------|--------|
-| **Smart Ingredient Substitution** | Future | Would require additional AI/ML models or API integration |
-| **Receipt Scanning / Budget Tracking** | Future | OCR integration complex; out of MVP scope |
-| **GPS Store Detection** | Future | Location permissions and geofencing added complexity |
-| **Recipe Sharing** | Future | Social features require backend infrastructure |
-
+### Final Report
+[CS501 Final Report (Google Doc)](https://docs.google.com/document/d/1hEBdZXUW6IlqsPdSrZ4G38wX1gVTOeCIexfKeeMVKjs/edit?tab=t.0)
 
 ---
-
-## Core Requirements
-
-### ✅ External API Integration
-- **TheMealDB API**: Recipe search, ingredient lists, cooking instructions
-- **OpenFoodFacts API**: Barcode scanning for nutrition data (calories, macros, product names)
-- Both APIs use Retrofit with Moshi for JSON parsing
-- Error handling with try-catch blocks and fallback UI states
-
-### ✅ Sensor Feature Implementation
-- **CameraX**: Real-time camera preview for barcode scanning
-- **ML Kit Barcode Scanning**: Detects and decodes product barcodes (EAN-13, UPC-A, etc.)
-- Runtime camera permissions via Accompanist Permissions library
-
-### ✅ Local Persistence
-- **Room Database**: Stores food log entries with nutrition data
-  - `FoodLogEntity` table with fields: id, mealName, calories, protein, carbs, fat, source, timestamp
-  - Database version 1 with auto-migration support
-- **SharedPreferences**: Stores user onboarding profile and meal plan data
-  - Calorie targets, weight goals, activity level
-  - Weekly meal assignments persisted across app restarts
-
-### ✅ UI Polish
-- Material 3 Design System with custom theme colors
-- Smooth animations and transitions
-- Progress bars with rounded corners and color coding
-- Consistent spacing and typography
-- Empty state messages and loading indicators
-
-### ✅ Error Handling
-- Network failures display user-friendly error messages
-- Barcode scan failures fallback to manual entry
-- Database operations wrapped in try-catch with logging
-- Input validation on all user forms (non-empty checks, number parsing)
-- Graceful degradation when APIs are unavailable
-
+### Final Project Overview 12/16
 ---
-
-## Architecture Overview
-
-### MVVM Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│                   UI Layer                       │
-│  (Composables: Screens, Dialogs, Components)    │
-│              ↓ StateFlow ↑ Events               │
-└─────────────────────────────────────────────────┘
-                          ↕
-┌─────────────────────────────────────────────────┐
-│               ViewModel Layer                    │
-│  • FoodLogViewModel                             │
-│  • NutritionDashboardViewModel                  │
-│  • MealPlanViewModel                            │
-│  • RecipeDiscoveryViewModel                     │
-│  • SessionViewModel                             │
-└─────────────────────────────────────────────────┘
-                          ↕
-┌─────────────────────────────────────────────────┐
-│               Data Layer                         │
-│  • Room Database (FoodLogDao, AppDatabase)      │
-│  • Repositories (RecipeDiscoveryRepository)     │
-│  • API Services (OpenFoodFactsService,         │
-│    MealApiService)                              │
-│  • SharedPreferences                            │
-└─────────────────────────────────────────────────┘
-```
-
-## Nutrition Calculation Details
-
-### Daily Calorie Goal
-- Set by user during onboarding (default: 2000 calories)
-- Used as basis for macro calculations
-
-### Macro Distribution (30/40/30 Split)
-The app calculates macro goals using a balanced macro split:
-
-```kotlin
-// Protein: 30% of calories from protein
-val proteinGoal = (calorieGoal * 0.30 / 4).toFloat()  // ÷4 cal/gram
-
-// Carbs: 40% of calories from carbs
-val carbsGoal = (calorieGoal * 0.40 / 4).toFloat()    // ÷4 cal/gram
-
-// Fat: 30% of calories from fat
-val fatGoal = (calorieGoal * 0.30 / 9).toFloat()      // ÷9 cal/gram
-```
-
 ## Build & Run Instructions
 
 ### Prerequisites
@@ -144,10 +38,66 @@ val fatGoal = (calorieGoal * 0.30 / 9).toFloat()      // ÷9 cal/gram
 * If not, click “Sync Project with Gradle Files” in the toolbar.
 
 4. **Run the App**
-* Connect the Android Studio emulator. 
+* Connect the Android Studio emulator.
 * Click Run  in Android Studio.
 
 The app should build successfully and launch into the onboarding screen.
+
+---
+## Feature Status
+
+### ✅ Fully Implemented Features
+
+| Feature | Implementation Details |
+|---------|-----------------------|
+| **Meal Planning + Shopping List** | Plan the week and auto-generate grouped ingredients per user |
+| **Recipe Discovery** | Search TheMealDB and cache details/ingredients for logging |
+| **Food Logging** | Manual entries, barcode scans, and recipe-based logging with nutrition lookup |
+| **Nutrition Dashboard** | Daily calories/macros with goals, progress bars, and alerts |
+| **Onboarding & Goals** | Collect calorie target, weights, activity level and persist per user |
+| **Auth & Sync** | Google/Firebase auth; optional Firestore sync for meal plans and logs |
+
+### Future Features
+
+| Feature | Status | Reason |
+|---------|--------|--------|
+| **Smart Ingredient Substitution** | Future | Would require additional AI/ML models or API integration |
+| **Receipt Scanning / Budget Tracking** | Future | OCR integration complex; out of MVP scope |
+| **GPS Store Detection** | Future | Location permissions and geofencing added complexity |
+| **Recipe Sharing** | Future | Social features require backend infrastructure |
+
+
+---
+
+## Core Requirements
+
+### ✅ Core Requirements
+- **External APIs**: TheMealDB (recipes), OpenFoodFacts (barcode nutrition), USDA FoodData Central (food search/nutrition), Firebase Auth/Firestore for sync
+- **Sensor**: CameraX preview with ML Kit barcode scanning and runtime permissions
+- **Local Persistence**: Room for food logs/meal plans/recipe cache; SharedPreferences for onboarding profile and serialized weekly plan per user
+- **External DB**: Firebase Firestore mirrors meal plans/food logs when signed in; Google Sign-In via Firebase Auth
+- **UI Polish**: Compose + Material 3 theme, responsive layouts, loading/empty states
+- **Error Handling**: Friendly network/error states, manual entry fallback for scans, guarded DB operations
+
+---
+
+## Architecture Overview
+
+### MVVM Architecture
+- ![Project Architecture](assets/Project%20Architecture.png) — MVVM with Compose UI, ViewModels using StateFlow, repositories for Room/Retrofit/Firebase
+- ![User Flow](assets/User%20FLow.png) — Onboarding → planning → recipes → logging → dashboard/shopping
+
+## Nutrition Calculation Details
+
+### Daily Calorie Goal
+- Set during onboarding; defaults to 2000 calories if not customized with weight and activity 
+- Goals persisted per user and reused across sessions
+
+### Macro Targets (current logic)
+- **Protein**: ~0.8 g per lb of current weight
+- **Fat**: ~30% of calorie goal ÷ 9 cal/g
+- **Carbs**: Remaining calories after protein and fat, ÷ 4 cal/g
+- Computed from onboarding profile and today’s logs; dashboard shows consumed vs goal
 
 
 ---
@@ -185,26 +135,6 @@ We are a 2-person Agile team:
 - **Abidul Islam** – UI/UX design, theming, layout using Jetpack Compose
 - **Both** – Shared responsibility for Room DB, data models, testing, and integration
 
-
-
-
-
----
-
-## Stretch Goals
-
-### ✅ Achieved
-- ~~Barcode scanning~~ - Fully implemented with ML Kit
-- ~~Smart shopping list~~ - Auto-generated with ingredient grouping
-- ~~Nutrition dashboard~~ - Real-time tracking with progress visualization
-
-### 🕓 Future Work
-- **Smart Ingredient Substitution**: Would require NLP or additional recipe API
-- **Receipt Scanning / Budget Tracking**: OCR integration is complex
-- **GPS Store Detection**: Location permissions and geofencing out of scope
-- **Recipe Sharing**: Would require backend server and user accounts
-- **Meal Prep Video Tutorials**: YouTube API integration deprioritized
-
 ---
 
 ## Tech Stack
@@ -222,8 +152,10 @@ We are a 2-person Agile team:
 - Kotlin Coroutines + Flow
 
 **APIs:**
-- TheMealDB API (recipe data)
-- OpenFoodFacts API (barcode nutrition data)
+- TheMealDB (recipes)
+- OpenFoodFacts (barcode nutrition)
+- USDA FoodData Central (food search/nutrition)
+- Firebase Auth + Firestore (auth/sync)
 
 **Sensors/Hardware:**
 - CameraX 1.3.1
@@ -259,4 +191,3 @@ We are a 2-person Agile team:
 - We double-checked all AI suggestions
 - Used AI as a learning tool, not a final code source
 - Ensured we understood each change before applying it
-
